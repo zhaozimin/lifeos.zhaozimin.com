@@ -1,0 +1,148 @@
+/**
+ * [INPUT]: 依赖 zzm.css 的 --zzm-* 令牌与 .zzm-card 卡片材质。
+ * [OUTPUT]: 作者名片样式（站点磁贴、域名行、频道胶囊）。
+ * [POS]: settings 的局部视觉边界；只由 AboutPanel 导入，随懒加载进入页面。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.about-kicker {
+  margin: 0;
+  color: var(--zzm-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.about-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.about-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--zzm-hairline);
+  border-radius: 12px;
+}
+
+.about-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.about-logo-round {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+}
+
+.about-logo-square {
+  display: block;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+}
+
+.about-tile-name {
+  margin: 0;
+  color: var(--zzm-ink);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.about-tile-sub {
+  margin: 0;
+  color: var(--zzm-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.about-domains {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.about-domain {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--zzm-text-2);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.about-domain:hover {
+  color: var(--zzm-ink);
+}
+
+.about-domain-region {
+  color: var(--zzm-muted);
+  font-size: 12px;
+}
+
+.about-region {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.about-region-title {
+  margin: 0;
+  color: var(--zzm-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.about-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.about-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border: 1px solid var(--zzm-hairline-strong);
+  border-radius: 999px;
+  background: var(--zzm-paper);
+  color: var(--zzm-text-2);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.about-pill:hover {
+  color: var(--zzm-ink);
+  border-color: var(--zzm-ink);
+}
+
+.about-pill-icon {
+  display: block;
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+
+.about-pill-icon.is-wordmark {
+  width: 26px;
+  height: 26px;
+  margin: -6px 0;
+}

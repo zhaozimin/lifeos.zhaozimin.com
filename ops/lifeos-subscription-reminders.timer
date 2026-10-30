@@ -1,0 +1,15 @@
+# [INPUT]: 北京时间与订阅提醒入队任务。
+# [OUTPUT]: 每天09至21点整点检查，服务重启后补查。
+# [POS]: 七天提醒调度；数据库按续费日期去重，过期文案不投递。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS subscription reminders during daytime
+
+[Timer]
+OnCalendar=*-*-* 09..21:00:00 Asia/Shanghai
+AccuracySec=30s
+Persistent=true
+Unit=lifeos-subscription-reminders.service
+
+[Install]
+WantedBy=timers.target

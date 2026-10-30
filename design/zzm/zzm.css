@@ -1,0 +1,962 @@
+/*!
+ * zzm · 赵子民设计系统 v4「纸 · 墨 · 朱」
+ * https://ui.zhaozimin.com  ·  v0.7.0（2026-10-16）  ·  锁版本地址：https://ui.zhaozimin.com/v/0.7.0/zzm.css
+ *
+ * 用法：引入后在根节点加 class="zzm-v4"——所有样式只在这个作用域内生效
+ * 规范：https://ui.zhaozimin.com/DESIGN.md  ·  目录：https://ui.zhaozimin.com/llms.txt
+ * 字体：系统字体栈，无网络字体（中文 PingFang SC → Hiragino Sans GB → Microsoft YaHei）
+ */
+
+/* ════════ baseline.css · 宿主基线（Tailwind preflight 的必要子集 + 减少动效） · src/extracted/baseline.css ════════ */
+
+/* ============================================================================
+ * 宿主基线 —— ui.zhaozimin 是真源
+ *
+ *   edu 的 v4 组件运行在 Tailwind v4 preflight 之上：box-sizing、标题/段落零外距、图片块级……
+ *   脱离 edu 单独使用时，这些「看不见的前提」缺席就会让尺寸差几个像素。
+ *   这里只收组件实际依赖的最小子集，全部包在 :where() 里——零特异性，永不覆盖组件自己的样式。
+ *   末段 reduced-motion 逐字取自 edu web/src/index.css（v4 的 keyframes.css 注明由它兜底）。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ * ========================================================================== */
+
+:where(.zzm-v4),
+:where(.zzm-v4) *,
+:where(.zzm-v4) *::before,
+:where(.zzm-v4) *::after { box-sizing: border-box; }
+
+:where(.zzm-v4) :where(h1, h2, h3, h4, h5, h6, p, blockquote, figure, ul, ol, dl, dd, pre) { margin: 0; }
+:where(.zzm-v4) :where(h1, h2, h3, h4, h5, h6) { font-size: inherit; font-weight: inherit; }
+:where(.zzm-v4) :where(img, svg, video, canvas) { display: block; vertical-align: middle; }
+:where(.zzm-v4) :where(img, video) { max-width: 100%; height: auto; }
+:where(.zzm-v4) :where(button, input, select, textarea) { font: inherit; letter-spacing: inherit; color: inherit; }
+:where(.zzm-v4) :where(button) { background-color: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ════════ tokens.css · 设计令牌 · src/system/styles/v4/tokens.css ════════ */
+
+/* ============================================================================
+ * v4 设计令牌 —— 知识星图「纸·墨·朱」调色板（canonical: edu.zhaozimin/project/知识星图 v4.dc.html）
+ *
+ *   命名策略：v4 一律用 `--zzm-*` 前缀，与旧 Ollama 令牌(--accent/--background…)物理隔离，
+ *   避免 v4 品牌朱色污染 shadcn 的 --accent(极淡灰 hover 面)。v4 屏引用 var(--zzm-accent,#A6402F)。
+ *
+ *   --zzm-accent 的运行时值由 ThemeRoot 注入(默认 #A6402F，与 DC 源 var(--accent,#A6402F) 兜底一致)；
+ *   此处 :root 兜底值保证任何脱离 ThemeRoot 的 v4 片段仍有正确朱色。
+ *
+ *   两套颜色（v0.3.0）：浅色写在 `:root, [data-theme="light"]`，深色写在 `[data-theme="dark"]`。
+ *     · 深色不是反相：每个令牌按「它在界面里扮演什么」单独定值——纸面压到深暖灰、面比纸亮一档，
+ *       墨（标题/墨键底）翻成浅墨，墨键上的字（on-ink）随之翻深；本来就深的暗底（封面/付款页）
+ *       只微调到能与深色纸面区分，不跟着翻成浅色。
+ *     · 文字灰阶在深色下逐级保持对比度不低于浅色同档；朱色分两个角色：填充（--zzm-accent，
+ *       键底不变）与文字（--zzm-accent-ink，深色下提亮，保证小字可读）。
+ *     · 任何子树可写 data-theme="light" 把令牌拉回浅色（如付款二维码所在的白色收银卡）。
+ *   间距、圆角、字体与主题无关，只写在 :root。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ * ========================================================================== */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* 品牌朱（可切 #A6402F / #8C3A31 / #B5543F，ThemeRoot 覆盖）*/
+  --zzm-accent: #A6402F;
+  --zzm-accent-ink: #A6402F;              /* 朱字：链接、提示、错误等文字用的朱色 */
+  --zzm-accent-tint: rgba(166, 64, 47, 0.04);  /* 朱色大面积浅染（已完成卡底）*/
+  --zzm-accent-line: rgba(166, 64, 47, 0.35);  /* 朱色描边（已完成卡边）*/
+  --zzm-accent-soft: rgba(166, 64, 47, 0.08);  /* 朱色小面积底（朱字标签、双链胶囊）*/
+
+  /* 面 · 底 */
+  --zzm-paper: #F6F6F4;      /* 应用画布 / 侧栏底 */
+  --zzm-surface: #FFFFFF;    /* 主内容面 / 卡片 */
+  --zzm-surface-2: #FFFFFF;  /* 浮层：确认窗、下拉、浮动面板 */
+  --zzm-input: #FDFDFC;      /* 输入槽内凹底 */
+  --zzm-ink: #161616;        /* 主文字墨色 */
+  --zzm-ink-strong: #1D1D1B; /* 深墨（黑胶囊 CTA、圆徽底）*/
+  --zzm-ink-max: #000000;    /* 墨的极值（深墨键悬停再压一档）*/
+  --zzm-on-ink: #FFFFFF;     /* 墨底上的字与图标 */
+
+  /* 文字灰阶（由深到浅）*/
+  --zzm-text-1: #26261F;
+  --zzm-text-2: #3F3F3B;
+  --zzm-text-3: #4A4A46;
+  --zzm-text-4: #6E6E6A;
+  --zzm-text-5: #72726E;
+  --zzm-muted: #8B8B85;
+  --zzm-muted-2: #A2A29C;
+  --zzm-muted-3: #B0B0AA;
+  --zzm-faint: #C6C6C0;
+
+  /* 中性填充 */
+  --zzm-chip: #EFEFEC;                 /* 骨架块、中性标签底、空格子 */
+  --zzm-wash-1: #FBFBFA;               /* 插图灰阶 1–5：示意图里的屏幕底、侧栏、文字条（由浅到深）*/
+  --zzm-wash-2: #F1F1EE;
+  --zzm-wash-3: #E7E7E3;
+  --zzm-wash-4: #E2E2DE;
+  --zzm-wash-5: #DBDBD6;
+  --zzm-ok-ink: #2E7D4F;               /* 成功提示字色 */
+  --zzm-fill: rgba(0, 0, 0, 0.04);     /* 行悬停 */
+  --zzm-fill-2: rgba(0, 0, 0, 0.07);   /* 导航选中、按下 */
+  --zzm-overlay: rgba(22, 22, 22, 0.46);  /* 确认窗遮罩（只降亮、不模糊）*/
+
+  /* 暗底（深色卡/封面/播放器/付款页）*/
+  --zzm-dark-panel: #1D1D1B;  /* 深色展台：推荐方案等两套主题都保持深色的大面 */
+  --zzm-dark-card: #131316;
+  --zzm-dark-poster: #0E0E10;
+  --zzm-dark-pay: #0B0B0C;
+
+  /* 细线 */
+  --zzm-hairline: rgba(0, 0, 0, 0.07);
+  --zzm-hairline-2: rgba(0, 0, 0, 0.09);
+  --zzm-hairline-strong: rgba(0, 0, 0, 0.14);
+  --zzm-line-hover: rgba(0, 0, 0, 0.3);   /* 悬停高亮描边（卡片/胶囊/线框键）*/
+
+  /* 学习热力（空 → 满，朱色同族）*/
+  --zzm-heat-0: #EFEFEC;
+  --zzm-heat-1: #E4C7C0;
+  --zzm-heat-2: #C98070;
+  --zzm-heat-3: #A6402F;
+
+  /* ── 课时档位信号色（v21.2.0，老大定版：免费绿 / 会员黄 / 拓展红）──
+     属「黑白系统里被允许的功能信号色」，同旧 index.css 的 --level-* 先例，集中于此单一真相源。
+     每档三件套：实色(accent，后台段选/分组用) / 浅底(bg，用户端 tint 胶囊) / 深字(ink，tint 上的可读字色)。
+     lib/courseTiers.js 引用这些令牌，前台 TierPill 与后台徽章不再各写字面色值。 */
+  --zzm-tier-free: #16A34A;                  /* 免费 · 绿 */
+  --zzm-tier-free-bg: rgba(22, 163, 74, 0.12);
+  --zzm-tier-free-ink: #157F3C;
+  --zzm-tier-member: #E0920A;                /* 会员 · 黄金 */
+  --zzm-tier-member-bg: rgba(224, 146, 10, 0.18);
+  --zzm-tier-member-ink: #8A5606;
+  --zzm-tier-ext: #A6402F;                   /* 拓展 · 红（品牌朱同族）*/
+  --zzm-tier-ext-bg: rgba(166, 64, 47, 0.11);
+  --zzm-tier-ext-ink: #A6402F;
+
+  /* ── 材质：微拟物光照模型里随主题变化的那部分（controls.css / base.css 只引用、不写色）──
+     光源方向与层数两套一致：顶部反光、贴地投影、反光光晕、按压内陷；深色只换强弱与明暗。 */
+  --zzm-selection: rgba(166, 64, 47, .16);
+  --zzm-shimmer: rgba(255, 255, 255, .65);          /* 骨架微光 */
+  --zzm-shine: rgba(255, 255, 255, .85);            /* 档位胶囊反光 */
+  --zzm-fill-lite: rgba(0, 0, 0, .03);              /* 极轻行悬停 */
+  --zzm-focus-ring: rgba(22, 22, 22, .07);          /* 输入聚焦光晕 */
+  --zzm-hover-shadow: 0 10px 30px rgba(0, 0, 0, .07);
+  --zzm-rest-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  --zzm-lift-shadow: 0 10px 30px rgba(0, 0, 0, .09), 0 1px 2px rgba(0, 0, 0, .04);
+  --zzm-card-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 6px 18px rgba(0, 0, 0, .05), inset 0 1px 0 rgba(255, 255, 255, .85);
+  --zzm-float-shadow: 0 1px 2px rgba(0, 0, 0, .10), 0 18px 48px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .92);
+  --zzm-input-shadow: inset 0 1.5px 3px rgba(0, 0, 0, .06), inset 0 1px 1px rgba(0, 0, 0, .04);
+  --zzm-accent-line-strong: rgba(166, 64, 47, .55);
+  /* 纸键（默认键 / 幽灵键悬停）*/
+  --zzm-key-ink: #3F3F3B;
+  --zzm-key-line: rgba(0, 0, 0, .14);
+  --zzm-key-line-hover: rgba(0, 0, 0, .18);
+  --zzm-key-face: linear-gradient(180deg, #FFFFFF 0%, #F2F2EF 100%);
+  --zzm-key-face-active: linear-gradient(180deg, #ECECE9 0%, #F4F4F1 100%);
+  --zzm-key-shadow: 0 0 0 3px rgba(255, 255, 255, .55), 0 1px 2px rgba(0, 0, 0, .09), 0 2px 6px rgba(0, 0, 0, .06), inset 0 1px 0 rgba(255, 255, 255, .92), inset 0 -1px 0 rgba(0, 0, 0, .05);
+  --zzm-key-shadow-hover: 0 0 0 4px rgba(255, 255, 255, .8), 0 2px 4px rgba(0, 0, 0, .10), 0 4px 12px rgba(0, 0, 0, .09), inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(0, 0, 0, .05);
+  --zzm-key-shadow-active: 0 0 0 3px rgba(255, 255, 255, .45), 0 1px 0 rgba(255, 255, 255, .65), inset 0 2px 4px rgba(0, 0, 0, .13), inset 0 1px 2px rgba(0, 0, 0, .09);
+  --zzm-key-shadow-focus: 0 0 0 3px rgba(166, 64, 47, .20), 0 1px 2px rgba(0, 0, 0, .09), 0 2px 6px rgba(0, 0, 0, .06), inset 0 1px 0 rgba(255, 255, 255, .92);
+  --zzm-ghost-shadow-hover: 0 0 0 3px rgba(255, 255, 255, .55), 0 1px 2px rgba(0, 0, 0, .09), 0 2px 6px rgba(0, 0, 0, .06), inset 0 1px 0 rgba(255, 255, 255, .92);
+  --zzm-ghost-shadow-active: inset 0 2px 4px rgba(0, 0, 0, .12);
+  --zzm-key-off: #F2F2EF;                           /* 禁用键灰面 */
+  --zzm-key-off-line: rgba(0, 0, 0, .08);
+  --zzm-key-off-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 1px 2px rgba(0, 0, 0, .04);
+  /* 墨键（主操作）：深色下翻成浅瓷键，仍是全屏最重的那颗键 */
+  --zzm-ink-key-ink: #FFFFFF;
+  --zzm-ink-key-line: rgba(0, 0, 0, .85);
+  --zzm-ink-key-face: linear-gradient(180deg, #3A3A36 0%, #1D1D1B 58%, #141412 100%);
+  --zzm-ink-key-face-active: linear-gradient(180deg, #101010 0%, #22221F 100%);
+  --zzm-ink-key-hover: brightness(1.12);
+  --zzm-ink-key-shadow: 0 0 0 3px rgba(22, 22, 22, .06), 0 1px 2px rgba(0, 0, 0, .18), 0 3px 10px rgba(22, 22, 22, .24), inset 0 1px 0 rgba(255, 255, 255, .20), inset 0 -1px 0 rgba(0, 0, 0, .38);
+  --zzm-ink-key-shadow-hover: 0 0 0 4px rgba(22, 22, 22, .09), 0 2px 4px rgba(0, 0, 0, .20), 0 5px 14px rgba(22, 22, 22, .28), inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(0, 0, 0, .38);
+  --zzm-ink-key-shadow-active: 0 0 0 3px rgba(22, 22, 22, .06), inset 0 2px 5px rgba(0, 0, 0, .55), inset 0 1px 2px rgba(0, 0, 0, .4);
+}
+
+/* ── 深色：夜间护眼。纸面深暖灰而非纯黑，正文浅墨而非纯白，避免高反差刺眼 ── */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --zzm-accent-ink: #E27D67;
+  --zzm-accent-tint: rgba(226, 125, 103, 0.07);
+  --zzm-accent-line: rgba(226, 125, 103, 0.42);
+  --zzm-accent-soft: rgba(226, 125, 103, 0.14);
+
+  --zzm-paper: #141413;
+  --zzm-surface: #1C1C1B;
+  --zzm-surface-2: #242423;
+  --zzm-input: #121211;
+  --zzm-ink: #E6E5DF;
+  --zzm-ink-strong: #EFEEE9;
+  --zzm-ink-max: #FFFFFF;
+  --zzm-on-ink: #151514;
+
+  --zzm-text-1: #DCDBD5;
+  --zzm-text-2: #C8C7C1;
+  --zzm-text-3: #BBBAB4;
+  --zzm-text-4: #A3A29C;
+  --zzm-text-5: #9C9B95;
+  --zzm-muted: #8D8C86;
+  --zzm-muted-2: #77766F;
+  --zzm-muted-3: #6A6964;
+  --zzm-faint: #4E4D49;
+
+  --zzm-chip: #272725;
+  --zzm-wash-1: #1F1F1E;
+  --zzm-wash-2: #262624;
+  --zzm-wash-3: #2E2E2C;
+  --zzm-wash-4: #353533;
+  --zzm-wash-5: #3C3C39;
+  --zzm-ok-ink: #6FCB8E;
+  --zzm-fill: rgba(255, 255, 255, 0.04);
+  --zzm-fill-2: rgba(255, 255, 255, 0.08);
+  --zzm-overlay: rgba(0, 0, 0, 0.62);
+
+  --zzm-dark-panel: #0F0F0E;
+  --zzm-dark-card: #0F0F10;
+  --zzm-dark-poster: #0C0C0D;
+  --zzm-dark-pay: #0B0B0C;
+
+  --zzm-hairline: rgba(255, 255, 255, 0.07);
+  --zzm-hairline-2: rgba(255, 255, 255, 0.1);
+  --zzm-hairline-strong: rgba(255, 255, 255, 0.16);
+  --zzm-line-hover: rgba(255, 255, 255, 0.3);
+
+  --zzm-heat-0: #272725;
+  --zzm-heat-1: #4B2C25;
+  --zzm-heat-2: #85402F;
+  --zzm-heat-3: #CF5B44;
+
+  --zzm-tier-free: #3FB96A;
+  --zzm-tier-free-bg: rgba(74, 222, 128, 0.14);
+  --zzm-tier-free-ink: #6FCB8E;
+  --zzm-tier-member: #F0A928;
+  --zzm-tier-member-bg: rgba(240, 169, 40, 0.16);
+  --zzm-tier-member-ink: #F0B44C;
+  --zzm-tier-ext: #D2624C;
+  --zzm-tier-ext-bg: rgba(226, 125, 103, 0.16);
+  --zzm-tier-ext-ink: #E8826C;
+
+  --zzm-selection: rgba(226, 125, 103, .3);
+  --zzm-shimmer: rgba(255, 255, 255, .05);
+  --zzm-shine: rgba(255, 255, 255, .22);
+  --zzm-fill-lite: rgba(255, 255, 255, .035);
+  --zzm-focus-ring: rgba(255, 255, 255, .08);
+  --zzm-hover-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  --zzm-rest-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+  --zzm-lift-shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 1px 2px rgba(0, 0, 0, .3);
+  --zzm-card-shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 18px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .035);
+  --zzm-float-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 18px 48px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .05);
+  --zzm-input-shadow: inset 0 1.5px 3px rgba(0, 0, 0, .45), inset 0 1px 1px rgba(0, 0, 0, .3);
+  --zzm-accent-line-strong: rgba(226, 125, 103, .6);
+  --zzm-key-ink: #D6D5CF;
+  --zzm-key-line: rgba(255, 255, 255, .12);
+  --zzm-key-line-hover: rgba(255, 255, 255, .2);
+  --zzm-key-face: linear-gradient(180deg, #2D2D2B 0%, #232322 100%);
+  --zzm-key-face-active: linear-gradient(180deg, #1A1A19 0%, #212120 100%);
+  --zzm-key-shadow: 0 0 0 3px rgba(255, 255, 255, .02), 0 1px 2px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .07), inset 0 -1px 0 rgba(0, 0, 0, .3);
+  --zzm-key-shadow-hover: 0 0 0 4px rgba(255, 255, 255, .035), 0 2px 4px rgba(0, 0, 0, .5), 0 4px 12px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .09), inset 0 -1px 0 rgba(0, 0, 0, .3);
+  --zzm-key-shadow-active: 0 0 0 3px rgba(255, 255, 255, .02), 0 1px 0 rgba(255, 255, 255, .04), inset 0 2px 4px rgba(0, 0, 0, .55), inset 0 1px 2px rgba(0, 0, 0, .4);
+  --zzm-key-shadow-focus: 0 0 0 3px rgba(226, 125, 103, .35), 0 1px 2px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .07);
+  --zzm-ghost-shadow-hover: 0 0 0 3px rgba(255, 255, 255, .02), 0 1px 2px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .07);
+  --zzm-ghost-shadow-active: inset 0 2px 4px rgba(0, 0, 0, .5);
+  --zzm-key-off: #1E1E1D;
+  --zzm-key-off-line: rgba(255, 255, 255, .06);
+  --zzm-key-off-shadow: none;
+  --zzm-ink-key-ink: #151514;
+  --zzm-ink-key-line: rgba(255, 255, 255, .55);
+  --zzm-ink-key-face: linear-gradient(180deg, #F2F1EC 0%, #E2E1DB 58%, #D5D4CE 100%);
+  --zzm-ink-key-face-active: linear-gradient(180deg, #C9C8C2 0%, #DAD9D3 100%);
+  --zzm-ink-key-hover: brightness(1.04);
+  --zzm-ink-key-shadow: 0 0 0 3px rgba(255, 255, 255, .04), 0 1px 2px rgba(0, 0, 0, .5), 0 3px 10px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .7), inset 0 -1px 0 rgba(0, 0, 0, .16);
+  --zzm-ink-key-shadow-hover: 0 0 0 4px rgba(255, 255, 255, .06), 0 2px 4px rgba(0, 0, 0, .5), 0 5px 14px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .75), inset 0 -1px 0 rgba(0, 0, 0, .16);
+  --zzm-ink-key-shadow-active: 0 0 0 3px rgba(255, 255, 255, .04), inset 0 2px 5px rgba(0, 0, 0, .28), inset 0 1px 2px rgba(0, 0, 0, .2);
+}
+
+:root {
+  /* 字体栈（与 DC 源一致：系统圆体优先 + CJK 兜底 + 等宽用 SF Mono）*/
+  --zzm-font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --zzm-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --zzm-serif: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif CJK SC", "Noto Serif SC", serif; /* 宋体：会员/社群等礼仪性页面的题名 */
+
+  /* ── 间距梯（8pt 网格 + 4pt 微调；canonical: styles/v4/SPACING.md，审计器 npm run audit:spacing）──
+     一切 padding/margin/gap/组件高度/行高从梯上取值——一体感来自全站共用同一把梯子 */
+  --zzm-s-1: 4px;   /* 微调 */
+  --zzm-s-2: 8px;   /* 元素内 */
+  --zzm-s-3: 12px;  /* 紧凑 */
+  --zzm-s-4: 16px;  /* 标准 */
+  --zzm-s-5: 20px;  /* 舒适 */
+  --zzm-s-6: 24px;  /* 区块内 */
+  --zzm-s-8: 32px;  /* 区块间 */
+  --zzm-s-10: 40px; /* 大区块 */
+  --zzm-s-12: 48px; /* 节内距 */
+  --zzm-s-16: 64px; /* 节间距 */
+
+  /* ── 圆角梯：同层级同档（4 微件 / 8 小控件 / 12 内嵌卡 / 16 卡片 / 999 胶囊）── */
+  --zzm-r-1: 4px;
+  --zzm-r-2: 8px;
+  --zzm-r-3: 12px;
+  --zzm-r-4: 16px;
+  --zzm-r-pill: 999px;
+}
+
+/* ════════ keyframes.css · 关键帧 · src/system/styles/v4/keyframes.css ════════ */
+
+/* ============================================================================
+ * v4 关键帧 —— 逐字移植自 DC 源 <helmet><style>（知识星图 v4.dc.html 行 22-31）
+ *   全部 zzm 前缀，全局注册无副作用。v4 屏以 inline `animation:` 引用。
+ *   reduced-motion 由旧 index.css 的全局媒体查询兜底关停，无需在此重复。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ * ========================================================================== */
+
+@keyframes zzmPulse { 0%, 100% { opacity: .15 } 50% { opacity: .55 } }
+@keyframes zzmIn    { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none } }
+@keyframes zzmUp    { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+@keyframes zzmSlide { from { opacity: 0; transform: translateX(-14px) } to { opacity: 1; transform: none } }
+@keyframes zzmGrow  { from { max-height: 0; opacity: 0 } to { max-height: 960px; opacity: 1 } }
+@keyframes zzmSpring {
+  0%   { transform: translateX(0) }
+  38%  { transform: translateX(150px) }
+  62%  { transform: translateX(128px) }
+  80%  { transform: translateX(142px) }
+  92%  { transform: translateX(136px) }
+  100% { transform: translateX(138px) }
+}
+@keyframes zzmIn2   { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none } }
+@keyframes zzmUp2   { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+@keyframes zzmFade  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes zzmPayIn { from { opacity: 0; transform: translateY(20px) scale(.985) } to { opacity: 1; transform: none } }
+@keyframes zzmShimmer { 100% { transform: translateX(100%) } }
+@keyframes zzmBtnSpin { to { transform: rotate(360deg) } }
+/* 一道反光扫过（时不时闪一下）：快扫一次(0→14%)后长歇——档位胶囊 .zzm-pill-shine 与 saving 键
+   .zzm-btn--busy 共用这一条，同一视觉语言。reduced-motion 由 index.css 全局兜底关停。 */
+@keyframes zzmPillShine { 0% { transform: translateX(-180%) } 14% { transform: translateX(180%) } 100% { transform: translateX(180%) } }
+
+/* ════════ base.css · 画布 · 选区 · 滚动条 · 骨架 · 悬停助手 · src/system/styles/v4/base.css ════════ */
+
+/* ============================================================================
+ * v4 基础样式 —— 移植自 DC 源 <helmet><style>（行 15-35），但【作用域收敛到 .zzm-v4】
+ *   旧 index.css 已有全局滚动条/selection/背景；为避免过渡期与旧 App/shadcn 打架，
+ *   v4 的画布底、朱色 selection、占位符灰、滚动条一律限定在 .zzm-v4 子树内。
+ *   深色（v0.3.0）不再整树反相：本文件只引用令牌，深浅两套数值全在 tokens.css——主题＝令牌值，
+ *   所以任何子树写 data-theme="light" 就能整块回到浅色（含悬停、骨架微光），不会被外层深色规则串色。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ * ========================================================================== */
+
+.zzm-v4 {
+  background: var(--zzm-paper);
+  color: var(--zzm-ink);
+  font-family: var(--zzm-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.zzm-v4 ::selection { background: var(--zzm-selection); }
+.zzm-v4 input::placeholder { color: var(--zzm-muted-3); }
+
+.zzm-v4 ::-webkit-scrollbar { width: 10px; height: 10px; }
+.zzm-v4 ::-webkit-scrollbar-thumb {
+  background: var(--zzm-hairline-strong);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.zzm-v4 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ── 悬停助手类（还原 DC 的 style-hover，用真伪类而非 JS，作用域 .zzm-v4）── */
+.zzm-v4 .zzm-hovercard { transition: all .16s ease; }
+.zzm-v4 .zzm-hovercard:hover {
+  transform: translateY(-3px);
+  border-color: var(--zzm-line-hover) !important;
+  box-shadow: var(--zzm-hover-shadow);
+}
+.zzm-v4 .zzm-pill { transition: all .15s ease; }
+.zzm-v4 .zzm-pill:hover { border-color: var(--zzm-line-hover) !important; }
+.zzm-v4 .zzm-node { transition: opacity .15s ease; }
+.zzm-v4 .zzm-node:hover { opacity: .75; }
+.zzm-v4 .zzm-dark-btn:hover { background: var(--zzm-ink-max) !important; }
+
+
+/* ── 侧栏/通用悬停（app-shell/Sidebars 及各屏族共用；命名=行为，勿按屏命名）── */
+.zzm-v4 .zzm-navbtn:hover { background: var(--zzm-fill-2) !important; }
+.zzm-v4 .zzm-iconbtn:hover { background: var(--zzm-fill-2); }
+.zzm-v4 .zzm-userfoot:hover { background: var(--zzm-fill); border-color: var(--zzm-hairline) !important; }
+.zzm-v4 .zzm-ghostline:hover { border-color: var(--zzm-line-hover) !important; color: var(--zzm-ink); }
+.zzm-v4 .zzm-ghostnav:hover { background: var(--zzm-fill-2); color: var(--zzm-ink); }
+.zzm-v4 .zzm-ghostnav-lite:hover { background: var(--zzm-fill-2); color: var(--zzm-ink); }
+.zzm-v4 .zzm-fadelink:hover { color: var(--zzm-muted); }
+/* 灰字文字链（components/v4/Breadcrumb 消费）：基色随父容器继承——消费方禁写内联 color，否则压死 :hover；
+   键盘焦点用全站统一的朱色光晕（与 .zzm-btn 同款），不落回浏览器默认环 */
+.zzm-v4 .zzm-inklink { color: inherit; transition: color .16s ease; }
+.zzm-v4 .zzm-inklink:hover { color: var(--zzm-ink); }
+.zzm-v4 .zzm-inklink:focus-visible { outline: none; border-radius: 4px; box-shadow: 0 0 0 3px rgba(166, 64, 47, .2); }
+.zzm-v4 .zzm-lift { transition: transform .16s ease; }
+.zzm-v4 .zzm-lift:hover { transform: translateY(-2px); }
+.zzm-v4 .zzm-fade86:hover { opacity: .86; }
+.zzm-v4 .zzm-fade88:hover { opacity: .88; }
+.zzm-v4 .zzm-rowhover:hover { background: var(--zzm-fill); }
+.zzm-v4 .zzm-rowhover-lite:hover { background: var(--zzm-fill-lite); }
+.zzm-v4 .zzm-hairbtn:hover { border-color: var(--zzm-ink) !important; color: var(--zzm-ink); }
+.zzm-v4 .zzm-accentlink:hover { text-decoration-color: var(--zzm-accent-ink) !important; color: var(--zzm-accent-ink); }
+.zzm-v4 input.zzm-input:focus, .zzm-v4 textarea.zzm-input:focus { border-color: var(--zzm-ink) !important; }
+.zzm-v4 input.zzm-input-accent:focus { border-color: var(--zzm-accent-ink) !important; }
+
+/* ── 骨架屏（数据加载占位；components/v4/Skeleton 消费）：纸灰底 + 微光扫过 ── */
+.zzm-v4 .zzm-skel {
+  position: relative;
+  overflow: hidden;
+  background: var(--zzm-chip);
+  border-radius: 8px;
+}
+.zzm-v4 .zzm-skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--zzm-shimmer), transparent);
+  animation: zzmShimmer 1.4s ease infinite;
+}
+
+/* ── 标注块（components/v4/MarkdownNotes）：Obsidian 官方色板为浅底而设，深色下提亮字色、加深底色。
+      色值由行内 --zzm-callout-rgb 提供；浅色维持行内原值，不依赖 color-mix（旧内核不受影响）── */
+.zzm-v4[data-theme="dark"] .zzm-callout { background: rgba(var(--zzm-callout-rgb), .09) !important; }
+.zzm-v4[data-theme="dark"] .zzm-callout-ink { color: color-mix(in srgb, rgb(var(--zzm-callout-rgb)), #fff 32%) !important; }
+
+/* ════════ controls.css · 微拟物质感类（设计系统的灵魂） · src/system/styles/v4/controls.css ════════ */
+
+/* ============================================================================
+ * v4 微拟物控件语言（skeuomorphic controls）—— 设计系统的灵魂
+ *
+ *   物理模型：光从正上方来。每个可交互控件都是一枚「真实的键」——
+ *     ① 凸面     竖向微渐变（顶亮→底沉），面是鼓起来的
+ *     ② 顶部反光 inset 高光线（键面上缘接住光）
+ *     ③ 贴地投影 两层落影（近影锐、远影柔），键浮在纸面上
+ *     ④ 反光光晕 外圈 0 0 0 Npx 高光环（键周围一圈反光），hover 时变亮变宽
+ *     ⑤ 按压内陷 :active 渐变翻转 + inset 阴影——按下去真的「凹」
+ *
+ *   铁律：
+ *     · 按钮一律【圆角矩形】（sm/md=8px · lg=12px），禁胶囊(999)——胶囊只留给非交互徽章
+ *     · 光影只从本文件的质感类取（zzm-btn / zzm-card / zzm-input），禁止散写 boxShadow——
+ *       微拟物的一体感来自全站共用同一套光照模型，各写各的光源方向必然穿帮
+ *     · backdrop-filter 仍然全域禁用（性能）；渐变/阴影仅经本文件的类生效
+ *
+ *   变体：默认纸键 / --primary 墨键 / --accent 朱键 / --ghost 幽灵(hover 才成键) / --ondark 暗面键
+ *   主题（v0.3.0）：纸键、墨键、卡片、输入槽、确认窗的面色与光影全部引用 tokens.css 的材质令牌，
+ *     深浅两套只换令牌值——光照模型（层数与方向）不变；深色下墨键翻成浅瓷键，仍是全屏最重的键。
+ *     朱键、暗面键、视频启动键只出现在品牌色或深色内容面上，两套主题共用同一组字面值。
+ *   尺寸：--sm h28 / 默认 h36 / --lg h44；--icon 方形；Shadcn/Radix 确认窗亦在此复用纸面/朱砂/键感
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ * ========================================================================== */
+
+/* ── 基键（纸面键）── */
+.zzm-v4 .zzm-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 8px;                                   /* 圆角矩形——按钮禁胶囊 */
+  border: 1px solid var(--zzm-key-line);
+  color: var(--zzm-key-ink);
+  background: var(--zzm-key-face);
+  box-shadow: var(--zzm-key-shadow);                    /* ④光晕 ③近影远影 ②顶部反光 ①底缘收沉 */
+  transition: box-shadow .16s ease, transform .16s ease, background .16s ease,
+    border-color .16s ease, filter .16s ease, opacity .16s ease;
+}
+.zzm-v4 .zzm-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--zzm-key-line-hover);
+  box-shadow: var(--zzm-key-shadow-hover);
+}
+.zzm-v4 .zzm-btn:active {
+  transform: translateY(0);
+  background: var(--zzm-key-face-active);              /* ⑤ 凹面翻转 */
+  box-shadow: var(--zzm-key-shadow-active);
+}
+.zzm-v4 .zzm-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--zzm-key-shadow-focus);              /* 键盘焦点＝朱色光晕 */
+}
+/* ── 禁用（非等待）：灰面配灰字——任何变体禁用后都读得清。
+      不再用 opacity 淡化整键：变体白字 × 半透明 × 灰面 ＝ 白字隐形事故（后台登录「验证中」曾不可读） ── */
+.zzm-v4 .zzm-btn:disabled {
+  cursor: not-allowed;
+  transform: none;
+}
+.zzm-v4 .zzm-btn:disabled:not(.zzm-btn--busy) {
+  color: var(--zzm-muted-2);
+  background: var(--zzm-key-off);
+  border-color: var(--zzm-key-off-line);
+  box-shadow: var(--zzm-key-off-shadow);
+}
+.zzm-v4 .zzm-btn--ondark:disabled:not(.zzm-btn--busy) {
+  color: rgba(255, 255, 255, .45);
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .16);
+  box-shadow: none;
+}
+
+/* ── Saving / 等待键（--busy）＝设计系统原始按钮本体，只叠加三样，不改基座（v21.2.0 老大定版）：
+      ① 一道反光扫过——与档位胶囊同一条 zzmPillShine 关键帧（::after 覆盖整键面、快扫一次后长歇＝
+         「时不时闪一下」，非呼吸光晕）；② 不可点击——pointer-events:none（Btn 组件 disabled 亦已禁）；
+      ③ 饱和度略低——filter:saturate(.72)（比普通键偏低，朱键最明显、墨键近灰变化细微）。
+      变体色相/渐变/边框/五层光影一概不动（墨键仍墨、朱键仍朱）；::before 旋转环保持不变。
+      overflow:hidden 只裁剪反光覆盖层，不裁外圈光影（box-shadow/focus 环不受 overflow 裁剪）。 ── */
+.zzm-v4 .zzm-btn--busy {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: .92;
+  filter: saturate(.72);
+  transform: none;
+}
+.zzm-v4 .zzm-btn--busy::before {
+  content: "";
+  position: relative;
+  z-index: 1;                                            /* 旋转环压在反光层之上 */
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  opacity: .7;
+  animation: zzmBtnSpin .7s linear infinite;
+}
+/* 反光层：斜向半透明白，从 -180% 扫到 180%（zzmPillShine），一道光从键面掠过 */
+.zzm-v4 .zzm-btn--busy::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: translateX(-180%);
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .45) 50%, transparent 60%);
+  animation: zzmPillShine 4.4s ease-in-out infinite;
+}
+
+/* ── 墨键（主操作·深墨）── */
+.zzm-v4 .zzm-btn--primary {
+  color: var(--zzm-ink-key-ink);
+  border-color: var(--zzm-ink-key-line);
+  background: var(--zzm-ink-key-face);
+  box-shadow: var(--zzm-ink-key-shadow);
+}
+.zzm-v4 .zzm-btn--primary:hover {
+  filter: var(--zzm-ink-key-hover);
+  border-color: var(--zzm-ink-key-line);
+  box-shadow: var(--zzm-ink-key-shadow-hover);
+}
+.zzm-v4 .zzm-btn--primary:active {
+  filter: none;
+  background: var(--zzm-ink-key-face-active);
+  box-shadow: var(--zzm-ink-key-shadow-active);
+}
+
+/* ── 朱键（品牌强调·会员/播放/危险动作）── */
+.zzm-v4 .zzm-btn--accent {
+  color: #FFFFFF;
+  border-color: rgba(122, 42, 29, .9);
+  background: linear-gradient(180deg, #C25743 0%, #A6402F 56%, #99392A 100%);
+  box-shadow:
+    0 0 0 3px rgba(166, 64, 47, .10),                   /* 朱色反光光晕 */
+    0 1px 2px rgba(0, 0, 0, .14),
+    0 3px 10px rgba(166, 64, 47, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .32),
+    inset 0 -1px 0 rgba(0, 0, 0, .20);
+}
+.zzm-v4 .zzm-btn--accent:hover {
+  filter: brightness(1.06);
+  border-color: rgba(122, 42, 29, .9);
+  box-shadow:
+    0 0 0 4px rgba(166, 64, 47, .16),
+    0 2px 4px rgba(0, 0, 0, .16),
+    0 5px 14px rgba(166, 64, 47, .34),
+    inset 0 1px 0 rgba(255, 255, 255, .36),
+    inset 0 -1px 0 rgba(0, 0, 0, .20);
+}
+.zzm-v4 .zzm-btn--accent:active {
+  filter: none;
+  background: linear-gradient(180deg, #8E3425 0%, #A03D2C 100%);
+  box-shadow:
+    0 0 0 3px rgba(166, 64, 47, .10),
+    inset 0 2px 5px rgba(0, 0, 0, .34),
+    inset 0 1px 2px rgba(0, 0, 0, .24);
+}
+
+/* ── 幽灵键（工具条/次级导航）：静默是文字，hover 才「长成键」── */
+.zzm-v4 .zzm-btn--ghost {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--zzm-text-3);
+}
+.zzm-v4 .zzm-btn--ghost:hover {
+  transform: translateY(-1px);
+  border-color: var(--zzm-key-line);
+  background: var(--zzm-key-face);
+  box-shadow: var(--zzm-ghost-shadow-hover);
+}
+.zzm-v4 .zzm-btn--ghost:active {
+  transform: translateY(0);
+  border-color: var(--zzm-key-line);
+  background: var(--zzm-key-face-active);
+  box-shadow: var(--zzm-ghost-shadow-active);
+}
+
+/* ── 暗面键（深色面上的键：付款页/播放器锁罩/海报态）── */
+.zzm-v4 .zzm-btn--ondark {
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, .28);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, .06) 100%);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, .05),
+    0 2px 8px rgba(0, 0, 0, .4),
+    inset 0 1px 0 rgba(255, 255, 255, .28),
+    inset 0 -1px 0 rgba(0, 0, 0, .3);
+}
+.zzm-v4 .zzm-btn--ondark:hover {
+  border-color: rgba(255, 255, 255, .4);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .22) 0%, rgba(255, 255, 255, .10) 100%);
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, .08),
+    0 3px 10px rgba(0, 0, 0, .45),
+    inset 0 1px 0 rgba(255, 255, 255, .34),
+    inset 0 -1px 0 rgba(0, 0, 0, .3);
+}
+.zzm-v4 .zzm-btn--ondark:active {
+  background: linear-gradient(180deg, rgba(0, 0, 0, .28) 0%, rgba(255, 255, 255, .04) 100%);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .5);
+}
+
+/* ── 视频启动键：唯一允许为圆形的交互键 ───────────────────────────────
+   圆形不是装饰例外，而是「点按即开始播放」这个媒体语义的通用符号；导学封面与
+   所有课时海报必须共用这一原件，避免同一动作在不同页面长成不同按钮。
+   其余文字按钮仍遵循 8/12 圆角矩形，禁止借此扩散成胶囊。 ── */
+.zzm-v4 .zzm-video-play {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, .16);
+  border-radius: 50%;
+  cursor: pointer;
+  color: #1D1D1B;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F2F2EF 100%);
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, .24),
+    0 2px 4px rgba(0, 0, 0, .16),
+    0 6px 16px rgba(0, 0, 0, .22),
+    inset 0 1px 0 rgba(255, 255, 255, .96),
+    inset 0 -1px 0 rgba(0, 0, 0, .08);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.zzm-v4 .zzm-video-play--center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.zzm-v4 .zzm-video-play:hover {
+  border-color: rgba(0, 0, 0, .3);
+  box-shadow:
+    0 0 0 5px rgba(255, 255, 255, .3),
+    0 3px 6px rgba(0, 0, 0, .18),
+    0 9px 22px rgba(0, 0, 0, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .98),
+    inset 0 -1px 0 rgba(0, 0, 0, .08);
+}
+.zzm-v4 .zzm-video-play--center:hover { transform: translate(-50%, -50%) scale(1.06); }
+.zzm-v4 .zzm-video-play:active {
+  transform: scale(.98);
+  background: linear-gradient(180deg, #E9E9E6 0%, #F4F4F1 100%);
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, .24),
+    inset 0 2px 5px rgba(0, 0, 0, .16),
+    inset 0 1px 2px rgba(0, 0, 0, .10);
+}
+.zzm-v4 .zzm-video-play--center:active { transform: translate(-50%, -50%) scale(.98); }
+.zzm-v4 .zzm-video-play:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 4px rgba(166, 64, 47, .28),
+    0 2px 4px rgba(0, 0, 0, .16),
+    0 6px 16px rgba(0, 0, 0, .22),
+    inset 0 1px 0 rgba(255, 255, 255, .96);
+}
+.zzm-v4 .zzm-video-play__icon {
+  width: 24px;
+  height: 24px;
+  margin-left: 4px;
+  fill: currentColor;
+}
+
+/* ── 尺寸（高度落 4pt 网格：28/36/44）── */
+.zzm-v4 .zzm-btn--sm { height: 28px; padding: 0 12px; font-size: 12px; gap: 4px; }
+.zzm-v4 .zzm-btn--lg { height: 44px; padding: 0 24px; font-size: 14px; border-radius: 12px; gap: 8px; }
+.zzm-v4 .zzm-btn--icon { width: 36px; padding: 0; }
+.zzm-v4 .zzm-btn--icon.zzm-btn--sm { width: 28px; }
+.zzm-v4 .zzm-btn--icon.zzm-btn--lg { width: 44px; }
+.zzm-v4 .zzm-btn--block { width: 100%; }
+
+/* ── 主题化确认窗（Shadcn/Radix Dialog）──────────────────────────────────
+   浏览器原生 confirm 没有产品的层级、语言和键感；所有后台确认统一经过
+   DialogProvider(appearance="v4")。Portal 仍挂在 .zzm-v4 内，故此处可复用
+   同一纸面、朱砂、凸键和内凹输入槽，而不是另造一套浮窗皮肤。
+   遮罩只降亮度，不模糊：背景仍可辨认当前操作上下文。 ── */
+.zzm-v4 .zzm-dialog-overlay {
+  background: var(--zzm-overlay);
+}
+.zzm-v4 .zzm-dialog-panel {
+  width: min(calc(100% - 32px), 440px);
+  max-width: 440px;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--zzm-hairline-strong);
+  border-radius: 16px;
+  background: var(--zzm-surface-2);
+  box-shadow: var(--zzm-float-shadow);
+}
+.zzm-v4 .zzm-dialog-title {
+  color: var(--zzm-ink-strong);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 24px;
+}
+.zzm-v4 .zzm-dialog-description {
+  color: var(--zzm-text-4);
+  font-size: 13px;
+  line-height: 20px;
+}
+.zzm-v4 input.zzm-dialog-input {
+  width: 100%;
+}
+.zzm-v4 .zzm-dialog-actions {
+  margin-top: 4px;
+  gap: 8px;
+}
+
+/* ── 可点卡链（zzm-cardlink）：给「裸缩略图+文字」的课节/历史/收藏卡穿上白卡承托，
+      悬停＝高亮描边 + 上浮 + 柔影——与综合首页课程卡(zzm-hovercard)同一手感,全站卡片一个词汇。
+      内容内嵌圆角取 12(卡 16 内嵌 12,圆角梯嵌套律) ── */
+.zzm-v4 .zzm-cardlink {
+  background: var(--zzm-surface);
+  border: 1px solid var(--zzm-hairline-2);
+  border-radius: 16px;
+  padding: 12px;
+  cursor: pointer;
+  box-shadow: var(--zzm-rest-shadow);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.zzm-v4 .zzm-cardlink:hover {
+  transform: translateY(-3px);
+  border-color: var(--zzm-line-hover);
+  box-shadow: var(--zzm-lift-shadow);
+}
+
+/* ── 已完成课节卡（--done）：容器级完成态——整卡纸面朱染 + 朱描边，一眼可辨，
+      取代右上角 18px ✓ 小圆徽（用户不必费力找小标识）。色值＝朱色低透明派生：
+      底 .04（比目录当前行 .06 低一档，大面积 tint 更淡）/ 边 .35（zzm-vdrag hover 同系数）。
+      必须走类而非 inline borderColor——inline 会永久压过 :hover 的描边高亮（specificity） ── */
+.zzm-v4 .zzm-cardlink--done {
+  background: var(--zzm-accent-tint);
+  border-color: var(--zzm-accent-line);
+}
+.zzm-v4 .zzm-cardlink--done:hover {
+  border-color: var(--zzm-accent-line-strong);
+}
+
+/* ── 正在播放的课节卡（--current）：视频页目录里标出「这一节」——朱色实线 2px 环（1px 描边 + 1px 外环投影），
+      比完成态的半透明朱线重一档：完成是历史、当前是位置；两态可叠加（完成底色 + 当前描边）。
+      环写进投影组，悬停时与上浮柔影一起保留，不被 :hover 的描边高亮盖掉 ── */
+.zzm-v4 .zzm-cardlink--current,
+.zzm-v4 .zzm-cardlink--current:hover {
+  border-color: var(--zzm-accent);
+}
+.zzm-v4 .zzm-cardlink--current {
+  box-shadow: 0 0 0 1px var(--zzm-accent), var(--zzm-rest-shadow);
+}
+.zzm-v4 .zzm-cardlink--current:hover {
+  box-shadow: 0 0 0 1px var(--zzm-accent), var(--zzm-lift-shadow);
+}
+
+/* ── 敬请期待的卡（--soon）：课节还没有视频，整卡不可点。
+      悬停时停在静止态：不上浮、不高亮描边、不加柔影，光标回到默认——「不响应」是第一层信号；
+      第二层信号是封面上的 .zzm-soon 罩。点击由组件拦截，本类只管手感。
+      只改悬停、不碰静止态：完成的朱染、播放中的朱环照常显示，悬停时也各自停在静止的样子 ── */
+.zzm-v4 .zzm-cardlink--soon { cursor: default; }
+.zzm-v4 .zzm-cardlink--soon:hover {
+  transform: none;
+  border-color: var(--zzm-hairline-2);
+  box-shadow: var(--zzm-rest-shadow);
+}
+.zzm-v4 .zzm-cardlink--soon.zzm-cardlink--done:hover { border-color: var(--zzm-accent-line); }
+.zzm-v4 .zzm-cardlink--soon.zzm-cardlink--current:hover {
+  border-color: var(--zzm-accent);
+  box-shadow: 0 0 0 1px var(--zzm-accent), var(--zzm-rest-shadow);
+}
+
+/* ── 敬请期待罩（zzm-soon）：盖在封面或海报上，说明「这节视频还没上线，不能点」。
+      罩是半透明黑 .5，比锁罩 .7 浅一档：锁住的课不必看清，敬请期待的课要让人看清封面。
+      不用 backdrop 模糊（与锁罩同理：同屏几十张卡逐张实时模糊太费 GPU）。
+      签是描边胶囊（非交互徽章）：白字 + 半透明白线，不用朱色——朱色在本站表示「可以行动」。
+      两套主题共用字面值：罩和签落在封面上，封面不随主题变。父容器需要 position: relative。
+      --lg 用于导学封面、播放舞台这类大画面 ── */
+.zzm-v4 .zzm-soon {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .5);
+  cursor: default;
+}
+.zzm-v4 .zzm-soon__tag {
+  /* 字距在末字后多留一份空白：右内距少一份字距，文字才在胶囊里视觉居中 */
+  padding: 4px 9px 4px 12px;
+  border: 1px solid rgba(255, 255, 255, .56);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .24);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 3px;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+}
+.zzm-v4 .zzm-soon--lg .zzm-soon__tag {
+  padding: 8px 16px 8px 20px;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 4px;
+}
+
+/* ── 微拟物卡片：白面浮在纸上（1px 细线仍在，光影让层级立起来）── */
+.zzm-v4 .zzm-card {
+  background: var(--zzm-surface);
+  border: 1px solid var(--zzm-hairline-2);
+  border-radius: 16px;
+  box-shadow: var(--zzm-card-shadow);
+}
+
+/* ── 输入内凹（既有 .zzm-input 全站自动升级：键是凸的，输入槽是凹的）── */
+.zzm-v4 input.zzm-input,
+.zzm-v4 textarea.zzm-input {
+  background: var(--zzm-input);
+  box-shadow: var(--zzm-input-shadow);
+}
+.zzm-v4 input.zzm-input:focus,
+.zzm-v4 textarea.zzm-input:focus {
+  box-shadow: var(--zzm-input-shadow), 0 0 0 3px var(--zzm-focus-ring);   /* 聚焦光晕 */
+}
+.zzm-v4 input.zzm-input-accent:focus {
+  box-shadow: var(--zzm-input-shadow), 0 0 0 3px rgba(166, 64, 47, .14);
+}
+
+/* ── 档位胶囊闪光（.zzm-pill-shine）：一道反光时不时从名牌上扫过（与 saving 键 --busy 同一条
+      zzmPillShine 关键帧）。胶囊几何/配色由 JSX inline 出（TierPill 读 lib/courseTiers）；本类只负责
+      裁剪 + 反光 ::after。错峰靠调用方经 CSS 变量 --zzm-shine-delay 逐卡设不同延时，避免齐刷。 ── */
+.zzm-v4 .zzm-pill-shine {
+  position: relative;
+  overflow: hidden;
+}
+.zzm-v4 .zzm-pill-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: translateX(-180%);
+  background: linear-gradient(105deg, transparent 34%, var(--zzm-shine) 50%, transparent 66%);
+  animation: zzmPillShine 4.6s ease-in-out infinite;
+  animation-delay: var(--zzm-shine-delay, 0s);
+}
+
+/* ════════ extracted.css · 提炼层（样张组件的光影 / 伪类 / 确认窗定位） · src/extracted/extracted.css ════════ */
+
+/* ============================================================================
+ * 提炼层样式 —— ui.zhaozimin 是真源（edu 里只有 AdmDesign 的 inline 样张，没有独立组件）
+ *
+ *   只放三类东西，其余一律 inline（与 v4 组件同一写法）：
+ *     ① 光影：光影铁律要求阴影只从质感类取——样张里散写的 boxShadow 在此收编成类
+ *     ② 伪类：hover / focus-visible（inline style 写不了伪类）
+ *     ③ 布局补齐：确认窗在 edu 里由 shadcn dialog.jsx 的 Tailwind 工具类定位，这里用纯 CSS 补齐，
+ *        使 .zzm-dialog-* 脱离 Tailwind 也能 1:1 成立
+ *   键盘焦点一律朱色光晕 0 0 0 3px rgba(166,64,47,.2)——与 .zzm-btn:focus-visible 同源。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ * ========================================================================== */
+
+@keyframes zzmDialogIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.96) }
+  to   { opacity: 1; transform: translate(-50%, -50%) }
+}
+
+/* ── 确认窗：遮罩只降亮不模糊；面板居中浮起（皮肤仍由 controls.css 的 .zzm-dialog-* 提供）── */
+.zzm-v4 .zzm-dialog-overlay { position: fixed; inset: 0; z-index: 50; animation: zzmFade .2s ease both; }
+.zzm-v4 .zzm-dialog-panel {
+  position: fixed; top: 50%; left: 50%; z-index: 51; display: grid;
+  transform: translate(-50%, -50%); animation: zzmDialogIn .2s cubic-bezier(.2, .7, .2, 1) both;
+}
+.zzm-v4 .zzm-dialog-panel--inline { position: relative; top: auto; left: auto; z-index: auto; transform: none; animation: none; }
+.zzm-v4 .zzm-dialog-header { display: grid; gap: 8px; }
+.zzm-v4 .zzm-dialog-title,
+.zzm-v4 .zzm-dialog-description { margin: 0; }
+.zzm-v4 .zzm-dialog-actions { display: flex; justify-content: flex-end; }
+
+/* ── 轻提示：深墨胶囊（非交互，允许 999）；阴影收编自样张 ── */
+.zzm-v4 .zzm-toast {
+  display: inline-block; background: #1D1D1B; color: #FFFFFF; font-size: 12px;
+  padding: 9px 18px; border-radius: 999px; white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+  animation: zzmUp .25s ease both;
+}
+
+/* ── 开关：滑块落影收编成类 ── */
+.zzm-v4 .zzm-switch__knob { box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+.zzm-v4 .zzm-switch:disabled .zzm-switch__knob { box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+
+/* ── 标签页：悬停提墨（同 .zzm-inklink 的灰→墨） ── */
+.zzm-v4 .zzm-tab { transition: color .16s ease; }
+.zzm-v4 .zzm-tab:hover { color: #161616 !important; }
+
+/* ── 分页：描边格悬停加深（同 .zzm-ghostline 的 .3 描边） ── */
+.zzm-v4 .zzm-page { transition: border-color .16s ease; }
+.zzm-v4 .zzm-page:not(:disabled):hover { border-color: rgba(0, 0, 0, .3) !important; }
+.zzm-v4 .zzm-page:disabled { cursor: not-allowed; }
+
+/* ── 表格表头排序键：悬停提墨 ── */
+.zzm-v4 .zzm-sort { transition: color .16s ease; }
+.zzm-v4 .zzm-sort:hover { color: #161616 !important; }
+
+/* ── 统一键盘焦点 ── */
+.zzm-v4 .zzm-switch:focus-visible,
+.zzm-v4 .zzm-check:focus-visible,
+.zzm-v4 .zzm-tab:focus-visible,
+.zzm-v4 .zzm-page:focus-visible,
+.zzm-v4 .zzm-sort:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(166, 64, 47, .2);
+}

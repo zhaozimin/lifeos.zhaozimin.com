@@ -1,0 +1,48 @@
+/**
+ * [INPUT]: 依赖基础面板、按钮与表单样式。
+ * [OUTPUT]: 定义每日报告、日期导航与作息时间轴。
+ * [POS]: public 的建议样式；报告与历史在窄屏按阅读顺序排列。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+.plan-teaser, .report-schedule { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin-bottom: 22px; background: linear-gradient(110deg, var(--fill-2), var(--wash-1)); }
+.plan-teaser h2, .report-schedule h2 { margin-top: 8px; }
+.plan-teaser p, .report-schedule p { color: var(--text-3); font-size: 12px; line-height: 1.8; margin-top: 9px; }
+.plan-teaser .btn { flex-shrink: 0; }
+.report-schedule { align-items: flex-start; }
+.report-schedule .form-actions { flex-shrink: 0; margin: 0; }
+.report-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 20px; align-items: start; }
+.report-history { padding: 20px 12px; position: sticky; top: 20px; }
+.report-history h3, .report-history > p { padding: 0 7px; }
+.report-history-list { margin-top: 16px; max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; }
+.report-history button { display: flex; flex-direction: column; gap: 7px; background: transparent; padding: 13px 9px; text-align: left; border: 1px solid transparent; border-radius: 8px; cursor: pointer; color: var(--text-3); }
+.report-history button.active { background: var(--fill-2); border-color: var(--line); }
+.report-history button strong { font-size: 13px; font-weight: 500; }
+.report-history button small { font-size: 10px; }
+.report-body { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.report-body > .panel { padding: 28px; }
+.report-cover { background: var(--wash-1); }
+.report-cover h2 { font-size: 26px; line-height: 1.5; margin: 9px 0 12px; }
+.report-cover > p { color: var(--text-3); font-size: 12px; line-height: 1.9; }
+.report-cover .eyebrow { margin-top: 24px; }
+.report-meta { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--text-4); font-size: 10px; }
+.report-cover > .report-meta:last-of-type { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 22px; }
+.plan-section-label { font-size: 10px; letter-spacing: 1.7px; color: var(--muted); margin-bottom: 10px; }
+.sleep-schedule { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 24px 10px; margin: 18px 0; border-radius: 8px; background: color-mix(in srgb, var(--sleep) 10%, transparent); color: var(--muted-2); }
+.sleep-schedule div { display: flex; flex-direction: column; gap: 10px; text-align: center; flex: 1; }
+.sleep-schedule small { font-size: 11px; color: var(--muted); }
+.sleep-schedule strong { font-family: var(--mono, monospace); font-size: 27px; font-weight: 500; color: var(--text-3); }
+.plan-list { padding-left: 19px; color: var(--text-3); font-size: 13px; line-height: 1.95; margin-top: 12px; }
+.plan-list li + li { margin-top: 6px; }
+.meal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+.meal-card { background: var(--fill-2); padding: 17px; border-radius: 8px; }
+.meal-card small { font-size: 11px; color: var(--muted); }
+.meal-card h3 { font-size: 13px; line-height: 1.9; margin-top: 10px; font-weight: 500; }
+.morning-check, .plan-missing { padding: 18px; margin-top: 20px; background: color-mix(in srgb, var(--warn) 10%, transparent); border-radius: 8px; }
+.morning-check h3, .plan-missing h3 { font-size: 13px; }
+.plan-missing { background: var(--fill-2); }
+.plan-sources { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; margin-top: 12px; }
+.plan-empty { text-align: center; padding: 70px 25px; }
+.plan-empty p { max-width: 520px; font-size: 13px; line-height: 2; color: var(--text-4); margin: 15px auto 0; }
+@media (max-width: 1200px) { .report-schedule { flex-direction: column; } .meal-grid { grid-template-columns: 1fr; } .meal-card { padding: 13px 18px; } .meal-card h3 { margin-top: 4px; } }
+@media (max-width: 800px) { .report-layout { grid-template-columns: 1fr; } .report-history { position: static; } .report-history-list { flex-direction: row; max-height: none; overflow-x: auto; } .report-history button { flex-shrink: 0; } .report-body > .panel { padding: 20px; } .plan-teaser { flex-direction: column; align-items: flex-start; } }
+@media (max-width: 480px) { .sleep-schedule { padding: 18px 5px; gap: 3px; } .sleep-schedule strong { font-size: 22px; } .report-schedule .form-actions { width: 100%; flex-wrap: wrap; } .report-cover h2 { font-size: 22px; } }

@@ -1,0 +1,132 @@
+/**
+ * [INPUT]: 依赖纸墨朱的 --zzm-* 令牌。
+ * [OUTPUT]: 提供工作台、健康、订阅共用的二级侧栏几何与导航行，以及内容区最大宽度 --lifeos-content-max。
+ * [POS]: 二级侧栏的唯一样式边界；iframe 构建复用此文件。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+/* 内容区最大宽度（不含左右 40 边距）：超出后居中。宿主、订阅直接引用；健康构建时从这里读出 */
+:root {
+  --lifeos-content-max: 1440px;
+}
+
+.workspace-sidebar {
+  width: 266px;
+  flex: none;
+  min-height: 0;
+  gap: 0;
+  padding: 0 12px 24px;
+  border-right: 1px solid var(--zzm-hairline);
+  background: var(--zzm-paper);
+  color: var(--zzm-ink);
+}
+.workspace-sidebar--embedded {
+  position: sticky;
+  inset: auto;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+}
+.workspace-side-heading {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 56px;
+  margin: 0;
+  padding: 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: 0;
+}
+.workspace-nav {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+}
+.workspace-link,
+.workspace-sidebar .workspace-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-direction: row;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--zzm-text-3);
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 20px;
+  text-align: left;
+  text-decoration: none;
+  transition: background .15s ease, color .15s ease;
+}
+.workspace-link:hover,
+.workspace-sidebar .workspace-link:hover {
+  background: var(--zzm-fill);
+  color: var(--zzm-ink);
+}
+/* 当前行：主配色朱砂红，朱色淡底、朱字、600 字重 */
+.workspace-link[aria-current="page"],
+.workspace-link[aria-pressed="true"],
+.workspace-link[aria-selected="true"],
+.workspace-link.is-current,
+.workspace-sidebar .workspace-link[aria-current="page"],
+.workspace-sidebar .workspace-link[aria-pressed="true"],
+.workspace-sidebar .workspace-link[aria-selected="true"],
+.workspace-sidebar .workspace-link.is-current {
+  background: var(--zzm-accent-soft);
+  color: var(--zzm-accent-ink);
+  font-weight: 600;
+}
+.workspace-link svg,
+.workspace-sidebar .workspace-link svg {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* iframe 使用内部宽度；宿主在 768px 切换到底部领域栏。 */
+@media (max-width: 639px) {
+  .workspace-sidebar--embedded {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--zzm-hairline);
+  }
+  .workspace-sidebar--embedded .workspace-side-heading { display: none; }
+  .workspace-sidebar--embedded .workspace-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3px;
+  }
+  .workspace-sidebar--embedded .workspace-nav .workspace-link {
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 4px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+}
+/* 底部日期插槽：有面板时贴底，顶部一条细线与导航区分；空插槽不占高 */
+.workspace-range-slot {
+  flex: none;
+}
+.workspace-range-slot:not(:empty) {
+  margin: 0 -12px -24px;
+  padding: 16px 12px 24px;
+  border-top: 1px solid var(--zzm-hairline);
+}
+/* 页面投放了日期面板，兜底月历让位；插槽为空时兜底占同一位置 */
+.workspace-range-slot:not(:empty) + .workspace-range-fallback {
+  display: none;
+}

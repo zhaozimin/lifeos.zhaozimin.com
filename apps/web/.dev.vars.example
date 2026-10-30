@@ -1,0 +1,8 @@
+# [INPUT]: LifeOS 项目公开连接与本人账号标识。
+# [OUTPUT]: 本机 Worker 配置示例，不含管理员密钥。
+# [POS]: 复制到忽略的 .dev.vars；仅连接本人 LifeOS 项目。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+SUPABASE_URL="https://PROJECT.supabase.co"
+SUPABASE_PUBLISHABLE_KEY="sb_publishable_REPLACE"
+OWNER_AUTH_ID="REPLACE"
+OWNER_EMAIL="REPLACE"

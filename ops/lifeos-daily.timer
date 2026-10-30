@@ -1,0 +1,15 @@
+# [INPUT]: 北京时间日历与每日小结服务。
+# [OUTPUT]: 每晚 23:30 触发，错过时不补发晨间小结。
+# [POS]: 小结调度；每个自然日最多一次。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS daily summary at 23:30 Asia/Shanghai
+
+[Timer]
+OnCalendar=*-*-* 23:30:00 Asia/Shanghai
+AccuracySec=30s
+Persistent=false
+Unit=lifeos-daily.service
+
+[Install]
+WantedBy=timers.target

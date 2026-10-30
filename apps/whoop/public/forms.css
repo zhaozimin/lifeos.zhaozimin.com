@@ -1,0 +1,319 @@
+/**
+ * [INPUT]: 依赖 styles.css 的加载顺序与页面语义类名。
+ * [OUTPUT]: 提供接入表单、生活记录与对话框反馈。
+ * [POS]: public 的输入与反馈样式；不定义全局视觉变量。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.step-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.step-title .step-number {
+  background: var(--fill-2);
+}
+.field {
+  display: grid;
+  gap: 4px;
+  margin: 16px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--text-2);
+}
+/* 输入槽：键是凸的，槽是凹的 */
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--zzm-input, #FDFDFC);
+  box-shadow: var(--zzm-input-shadow, none);
+  color: var(--ink);
+  font-size: 13px;
+  outline: none;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--ink);
+  box-shadow: var(--zzm-input-shadow, none), 0 0 0 3px var(--zzm-focus-ring, rgba(22, 22, 22, .07));
+}
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--muted);
+}
+.field textarea {
+  resize: vertical;
+  min-height: 76px;
+}
+.field-help {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+.form-actions small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.code-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--fill-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 11px;
+  word-break: break-all;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.code-box code {
+  flex: 1;
+}
+.code-box .icon-button {
+  flex-shrink: 0;
+}
+.scopes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.scopes code {
+  font-size: 9px;
+  color: var(--text-4);
+  background: var(--fill-2);
+  padding: 5px 7px;
+  border-radius: 4px;
+}
+.guide-list {
+  margin: 16px 0 0;
+  padding-left: 20px;
+  color: var(--text-4);
+  font-size: 11px;
+  line-height: 2.1;
+}
+.guide-list li {
+  padding-left: 3px;
+  margin-bottom: 7px;
+}
+.guide-list strong {
+  font-weight: 500;
+  color: var(--text-2);
+}
+.info-box {
+  padding: 14px 15px;
+  background: var(--fill-2);
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.9;
+  color: var(--text-4);
+  margin-top: 17px;
+}
+.engine-graphic {
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  background: var(--fill-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+.engine-graphic .icon {
+  width: 24px;
+  height: 24px;
+  color: var(--good);
+}
+.engine-copy {
+  font-size: 11px;
+  line-height: 1.95;
+  color: var(--text-4);
+  margin-top: 10px;
+}
+.inline-note {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin-top: 12px;
+}
+.record-card {
+  padding: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.record-card:last-child {
+  border-bottom: 0;
+}
+.record-date {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+}
+.record-metrics {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: var(--text-4);
+  margin-top: 13px;
+}
+.record-text {
+  font-size: 11px;
+  line-height: 1.9;
+  color: var(--text-4);
+  margin-top: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.record-list {
+  padding: 0;
+}
+.symptom-checks {
+  display: flex;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-4);
+  margin-top: 12px;
+}
+.symptom-checks label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.symptom-checks input {
+  accent-color: var(--green);
+}
+details {
+  margin-top: 12px;
+  font-size: 10px;
+  color: var(--text-4);
+  line-height: 1.9;
+}
+summary {
+  cursor: pointer;
+  color: var(--text-3);
+}
+details p {
+  margin-top: 10px;
+}
+.journal-empty {
+  padding: 38px;
+  text-align: center;
+  color: var(--text-4);
+  font-size: 12px;
+  line-height: 2;
+}
+.journal-empty .icon {
+  width: 33px;
+  height: 33px;
+  margin-bottom: 15px;
+  color: var(--muted);
+}
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 27px;
+  width: min(560px, calc(100vw - 30px));
+  max-height: 90vh;
+  overflow: auto;
+  color: var(--ink);
+  box-shadow: var(--float-shadow);
+}
+/* 遮罩只降亮，不模糊 */
+dialog::backdrop {
+  background: var(--overlay);
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dialog-heading h2 {
+  font-size: 21px;
+}
+.dialog-intro {
+  font-size: 11px;
+  color: var(--text-4);
+  line-height: 1.8;
+  margin-top: 10px;
+}
+#toast {
+  position: fixed;
+  bottom: 25px;
+  left: calc(50% + 85px);
+  transform: translateX(-50%) translateY(15px);
+  background: var(--ink-strong);
+  color: var(--on-ink);
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s;
+  z-index: 100;
+  max-width: calc(100vw - 40px);
+  line-height: 1.7;
+}
+#toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#toast.error {
+  background: var(--bad);
+}
+.spin {
+  animation: spin 1.3s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.urgent-callout {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bad) 28%, transparent);
+}
+.urgent-callout h3 {
+  color: var(--bad);
+}
+.urgent-callout .guidance-summary {
+  color: var(--bad);
+}
+.checkin-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.chip-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}

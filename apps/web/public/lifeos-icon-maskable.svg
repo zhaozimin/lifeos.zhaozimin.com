@@ -1,0 +1,20 @@
+<!-- [INPUT]: 由 apps/web/brand-icons.mjs 从 lifeos-mark.svg 母版生成。[OUTPUT]: LifeOS 朱砂根图标。
+[POS]: 静态品牌资源，勿手改；改标识请改母版后运行 npm run icons。[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-9.43 -9.43 42.86 42.86" role="img" aria-label="LifeOS">
+  <rect x="-9.43" y="-9.43" width="42.86" height="42.86" rx="0" fill="#F6F6F4"/>
+  <path d="M3.2 2.6 C6.6 4.6 9.4 7.4 11.4 10.6" stroke="#161616" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M9.6 8.2 C11.6 4.4 16.6 2 21.6 2.6 C20.4 7.2 15.4 9.6 9.6 8.2 Z" fill="#161616"/>
+  <path d="M10.6 7.8 C13.6 6.4 16.2 5 18.6 3.6" stroke="#F6F6F4" stroke-width="0.55" stroke-linecap="round"/>
+  <path d="M7.6 6.4 C6.4 9.4 3.6 11 1 10.6 C1.6 7.8 4.4 6 7.6 6.4 Z" fill="#161616"/>
+  <path d="M6.8 7 C5.4 8.2 4 9.2 2.6 9.8" stroke="#F6F6F4" stroke-width="0.5" stroke-linecap="round"/>
+  <g stroke="#161616" stroke-width="1.2" stroke-linecap="round">
+    <path d="M11.4 10.6 L12.4 12.4"/>
+    <path d="M12.4 12.4 L7.8 15.8 M12.4 12.4 L10.6 18.6 M12.4 12.4 L14.6 18.6 M12.4 12.4 L17.4 15.6"/>
+  </g>
+  <g fill="#A6402F">
+    <circle cx="6.9" cy="16.9" r="2"/>
+    <circle cx="10.3" cy="20.4" r="2"/>
+    <circle cx="14.9" cy="20.4" r="2"/>
+    <circle cx="18.3" cy="16.7" r="2"/>
+  </g>
+</svg>

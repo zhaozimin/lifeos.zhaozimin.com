@@ -1,0 +1,460 @@
+/**
+ * [INPUT]: 依赖纸墨朱令牌、共用侧栏样式、Tailwind CSS 4 与 ThemeProvider 写入的 data-theme。
+ * [OUTPUT]: 对外提供 shadcn 语义变量到纸墨朱令牌的桥、哑光数据色、nature 色、字阶类与弹层动效。
+ * [POS]: 面板全局视觉入口。组件继续写 bg-card、text-muted-foreground 等语义类，
+ *        取值全部经此桥落到 --zzm-*；亮暗由 zzm.css 的 [data-theme] 切换，此处不重复写深色界面色。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+/* 层级顺序：设计系统排在 Tailwind 预置重置之后、工具类之前。
+   zzm.css 的基线是 :where() 重置（标题与段落清零外距、字号继承）；若不入层，
+   它会压过一切 Tailwind 工具类，页面里写在 h/p 上的 mt-*、text-* 全部失效 */
+@layer theme, base, zzm, components, utilities;
+@import "../../../../design/zzm/zzm.css" layer(zzm);
+@import "tailwindcss";
+@import "./components/ui/fields.css";
+@import "./components/shell/shell.css";
+@import "./components/shell/sidebar.css";
+@import "./components/ui/timeline.css";
+
+/* dark: 变体跟随 ThemeProvider 写入的 data-theme，而不是系统媒体查询 */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ============================================================
+ *  语义桥：shadcn 变量 → 纸墨朱
+ *  primary 是墨，不是朱：朱色一屏只标一次「下一步」，由页面显式使用
+ * ============================================================ */
+:root {
+  --radius: 8px;
+
+  --background: var(--zzm-paper);
+  --foreground: var(--zzm-ink);
+  --card: var(--zzm-surface);
+  --card-foreground: var(--zzm-ink);
+  --popover: var(--zzm-surface-2);
+  --popover-foreground: var(--zzm-ink);
+
+  --primary: var(--zzm-ink);
+  --primary-foreground: var(--zzm-on-ink);
+  --secondary: var(--zzm-chip);
+  --secondary-foreground: var(--zzm-text-2);
+  --muted: var(--zzm-chip);
+  --muted-foreground: var(--zzm-text-4);
+  --accent: var(--zzm-fill-2);
+  --accent-foreground: var(--zzm-ink);
+
+  --destructive: var(--zzm-accent-ink);
+  --destructive-foreground: #FFFFFF;
+  --success: var(--zzm-ok-ink);
+
+  --border: var(--zzm-hairline-2);
+  --input: var(--zzm-hairline-strong);
+  --ring: var(--zzm-ink);
+
+  --sidebar: var(--zzm-paper);
+  --sidebar-foreground: var(--zzm-ink);
+  --sidebar-primary: var(--zzm-ink);
+  --sidebar-primary-foreground: var(--zzm-on-ink);
+  --sidebar-accent: var(--zzm-fill-2);
+  --sidebar-accent-foreground: var(--zzm-ink);
+  --sidebar-border: var(--zzm-hairline);
+
+  --font-sans: var(--zzm-font);
+  --font-serif: var(--zzm-font);
+  --font-mono: var(--zzm-mono);
+
+  /* ── 哑光数据色：与 theme/index.ts 的 DATA_SERIES 逐位同值 ── */
+  --data-1: #5F7391; --data-2: #A68A5B; --data-3: #6E8C74; --data-4: #8B7393; --data-5: #4F8682;
+  --data-6: #A07163; --data-7: #7E8A55; --data-8: #6C76A3; --data-9: #9A8F84; --data-10: #556066;
+  /* 提醒色：设计系统没有黄色角色；只用于预算、阈值等需要人处理的数据状态 */
+  --warning: #96691F;
+
+  --nature-core-light: var(--data-1);
+  --nature-support-light: var(--data-2);
+  --nature-recovery-light: var(--data-3);
+  --nature-leisure-light: var(--data-4);
+  --nature-core-dark: #8FA2C0;
+  --nature-support-dark: #C8AD7F;
+  --nature-recovery-dark: #94B39A;
+  --nature-leisure-dark: #B39BBA;
+  --nature-core: var(--nature-core-light);
+  --nature-support: var(--nature-support-light);
+  --nature-recovery: var(--nature-recovery-light);
+  --nature-leisure: var(--nature-leisure-light);
+}
+
+[data-theme="dark"] {
+  --destructive-foreground: #FFFFFF;
+  --data-1: #8FA2C0; --data-2: #C8AD7F; --data-3: #94B39A; --data-4: #B39BBA; --data-5: #7DB1AC;
+  --data-6: #C49A8B; --data-7: #A8B47D; --data-8: #98A1CB; --data-9: #BDB3A8; --data-10: #8E9AA1;
+  --warning: #D9A94F;
+  --nature-core: var(--nature-core-dark);
+  --nature-support: var(--nature-support-dark);
+  --nature-recovery: var(--nature-recovery-dark);
+  --nature-leisure: var(--nature-leisure-dark);
+}
+
+/* 旧品牌点缀名只作别名保留，指向数据色；新代码直接写 --data-* 或 --zzm-* */
+:root {
+  --brand-red: var(--zzm-accent);
+  --brand-orange: var(--data-6);
+  --brand-coral: var(--data-6);
+  --brand-sand: var(--zzm-chip);
+  --brand-sage: var(--data-3);
+  --brand-blue: var(--data-1);
+  --brand-violet: var(--data-4);
+  --brand-ink: var(--zzm-ink);
+  --chart-1: var(--data-1);
+  --chart-2: var(--data-2);
+  --chart-3: var(--data-3);
+  --chart-4: var(--data-4);
+  --chart-5: var(--data-5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-brand-red: var(--brand-red);
+  --color-brand-coral: var(--brand-coral);
+  --color-brand-sand: var(--brand-sand);
+  --color-brand-sage: var(--brand-sage);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-violet: var(--brand-violet);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-nature-core: var(--nature-core);
+  --color-nature-support: var(--nature-support);
+  --color-nature-recovery: var(--nature-recovery);
+  --color-nature-leisure: var(--nature-leisure);
+  --color-zzm-accent: var(--zzm-accent);
+  --color-zzm-accent-ink: var(--zzm-accent-ink);
+  --color-zzm-accent-soft: var(--zzm-accent-soft);
+  --color-zzm-accent-line: var(--zzm-accent-line);
+  --color-zzm-paper: var(--zzm-paper);
+  --color-zzm-chip: var(--zzm-chip);
+  --color-zzm-fill: var(--zzm-fill);
+  --color-zzm-fill-2: var(--zzm-fill-2);
+  --color-zzm-muted: var(--zzm-muted);
+  --color-zzm-faint: var(--zzm-faint);
+  --color-zzm-ok: var(--zzm-ok-ink);
+  --color-data-1: var(--data-1);
+  --color-data-2: var(--data-2);
+  --color-data-3: var(--data-3);
+  --color-data-4: var(--data-4);
+  --color-data-5: var(--data-5);
+  --color-data-6: var(--data-6);
+  --color-data-7: var(--data-7);
+  --color-data-8: var(--data-8);
+  --color-data-9: var(--data-9);
+  --color-data-10: var(--data-10);
+
+  --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* 圆角梯：4 微件 / 8 按钮与输入 / 12 内嵌卡 / 16 卡片与面板 */
+  --radius-xs: 4px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
+
+  /* 动效：产品内 150–250ms，标准缓动 */
+  --ease-zzm: cubic-bezier(.2, .7, .2, 1);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  html {
+    background: var(--zzm-paper);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--zzm-font);
+    font-size: 14px;
+    line-height: 24px;
+    color: var(--zzm-ink);
+    background: var(--zzm-paper);
+    overscroll-behavior-y: contain;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+}
+
+/* ============================================================
+ *  字阶：沿用设计系统 0.5 步进字阶，行高写 px 且为 4 的倍数
+ *  .serif / .display 是历史类名，纸墨朱没有衬线，统一落到系统字体
+ * ============================================================ */
+.serif,
+.display {
+  font-family: var(--zzm-font);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.brand-logo {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+}
+
+.text-display-lg {
+  font-size: 40px;
+  font-weight: 750;
+  line-height: 48px;
+  letter-spacing: -0.5px;
+}
+
+.text-display-md {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.text-display-sm {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.text-title-lg {
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 24px;
+}
+
+.text-title-md {
+  font-size: 14.5px;
+  font-weight: 650;
+  line-height: 24px;
+}
+
+.text-title-sm {
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 20px;
+}
+
+.text-body-md {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.text-body-sm {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.text-caption {
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 20px;
+  color: var(--zzm-text-4);
+}
+
+/* 节标签：mono 小字加宽字距，与设计系统 label 同值 */
+.text-caption-uppercase {
+  font-family: var(--zzm-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  line-height: 16px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--zzm-muted);
+}
+
+.text-mono {
+  font-family: var(--zzm-mono);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 静态面板：卡片语法（白卡 + .09 细线 + 16 圆角 + 浮起光影）由 .zzm-card 提供 */
+.panel {
+  border: 1px solid var(--zzm-hairline-2);
+  background: var(--zzm-surface);
+  border-radius: 16px;
+}
+
+.hairline-top {
+  border-top: 1px solid var(--zzm-hairline-2);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--zzm-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* ── 滚动条：细条、透明轨道，平时隐身，滚动中才浮现（data-scrolling 由 lib/scrollbars 写入）──
+   标准属性给 Chrome 121+ 与 Firefox；webkit 伪元素给 Safari，并压过 zzm.css 的常显规则 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+[data-scrolling] {
+  scrollbar-color: var(--zzm-line-hover) transparent;
+}
+
+.zzm-v4 *::-webkit-scrollbar,
+.zzm-v4::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+.zzm-v4 *::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+}
+
+.zzm-v4 [data-scrolling]::-webkit-scrollbar-thumb {
+  background-color: var(--zzm-line-hover);
+}
+
+/* 键自带聚焦光晕（--zzm-key-shadow-focus）；其余元素用朱色细环 */
+*:focus-visible {
+  outline: 2px solid var(--zzm-accent-line);
+  outline-offset: 2px;
+}
+
+.zzm-btn:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+::selection {
+  background: var(--zzm-selection);
+  color: var(--zzm-ink);
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (max-width: 760px) {
+  .text-display-lg {
+    font-size: 26px;
+    line-height: 32px;
+  }
+}
+
+@media print {
+  html[data-theme="dark"] {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+
+/* ============================================================
+ *  弹层动效：遮罩淡入 / 抽屉上滑 / 弹窗轻起
+ *  时长 200–250ms，标准缓动；尊重「减弱动态效果」
+ * ============================================================ */
+@keyframes overlay-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drawer-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes modal-pop-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-overlay-in {
+  animation: overlay-fade-in 200ms ease-out;
+}
+
+.animate-drawer-up {
+  animation: drawer-slide-up 250ms cubic-bezier(.2, .7, .2, 1);
+}
+
+.animate-modal-in {
+  animation: modal-pop-in 200ms cubic-bezier(.2, .7, .2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-overlay-in,
+  .animate-drawer-up,
+  .animate-modal-in {
+    animation: none;
+  }
+}

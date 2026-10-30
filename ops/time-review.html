@@ -1,0 +1,188 @@
+<!doctype html>
+<!--
+[INPUT]: 去重时间快照、全部原分类与本人填写的整理草稿。
+[OUTPUT]: 同名批量分类、逐条覆盖、类别映射和可返还HTML/JSON。
+[POS]: 完全离线的人工整理工作台；不写本地或云端账本。
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+-->
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>LifeOS · 时间分类人工整理</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#18273e;background:#f4f6fa;font-size:14px;--blue:#315cd5;--line:#e1e7ef}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer;border:1px solid #d4ddea;background:white;color:#263a59;border-radius:8px;padding:9px 13px;white-space:nowrap}button:hover{background:#eef3ff;border-color:#96ade6}button:disabled{opacity:.45;cursor:default}.primary{background:var(--blue);color:white;border-color:var(--blue);font-weight:600}.primary:hover{background:#244bbc;color:white}.small{padding:5px 8px;font-size:12px}input,select,textarea{border:1px solid #d8e0eb;border-radius:7px;padding:8px 9px;background:white;color:#1b304e;max-width:100%}input:focus,select:focus,textarea:focus{outline:2px solid #b8cafa;outline-offset:1px}textarea{resize:vertical}label{font-size:12px;color:#566981}header{background:#14243d;color:white;padding:24px 30px;display:flex;justify-content:space-between;gap:20px;align-items:center}header small{color:#a3badf;letter-spacing:2px;font-size:11px}h1{font-size:25px;letter-spacing:-.6px;margin:7px 0}header p{margin:0;color:#bccbe2;font-size:12px;line-height:1.8}.header-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}.header-actions .primary{background:#6f91ff;border-color:#6f91ff;color:#0c1b35}.layout{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 125px)}aside{background:white;border-right:1px solid var(--line);padding:25px 18px}main{padding:24px 27px;min-width:0}.step{display:flex;gap:10px;margin:0 0 22px;align-items:flex-start}.step b{display:grid;place-items:center;border-radius:50%;background:#edf2ff;color:#355dd0;width:25px;height:25px;flex:none;font-size:12px}.step strong{display:block;font-size:13px;margin:3px 0 5px}.muted{color:#738299;font-size:12px;line-height:1.7}.aside-box{border-top:1px solid var(--line);padding-top:19px;margin-top:23px}.aside-box h3{font-size:13px;margin:0 0 10px}.group-list{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}.chip{font-size:11px;background:#f1f4f9;border:1px solid #e5eaf2;border-radius:5px;padding:3px 6px;display:inline-block;line-height:1.5}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:17px}.stat{border:1px solid var(--line);background:white;border-radius:12px;padding:17px}.stat .value{font-size:27px;font-weight:700;margin:7px 0;color:#192d4c;font-variant-numeric:tabular-nums}.stat .label{font-size:12px;color:#60718b}.progress{height:4px;background:#e9eef6;border-radius:9px;margin-top:10px;overflow:hidden}.progress i{display:block;height:100%;background:#4776e7}.notice{border:1px solid #dce5fb;background:#eef3ff;color:#35537d;padding:12px 15px;border-radius:9px;font-size:12px;line-height:1.9;margin-bottom:18px}.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:17px}.tabs button{border:0;border-radius:8px 8px 0 0;background:none;padding:12px 18px;color:#697b93}.tabs button.active{color:#214cbe;background:#e5edff;font-weight:700;border-bottom:2px solid #416cdb}.panel{background:white;border:1px solid var(--line);border-radius:12px;overflow:hidden}.toolbar{padding:15px;border-bottom:1px solid var(--line);display:flex;gap:9px;align-items:center;flex-wrap:wrap}.toolbar input[type=search]{min-width:230px;flex:1}.toolbar select{max-width:160px;font-size:12px}.check-label{display:flex;align-items:center;gap:5px;white-space:nowrap}.subbar{padding:10px 15px;border-bottom:1px solid var(--line);font-size:12px;color:#65758e;background:#fafbfd;display:flex;gap:12px;align-items:center;justify-content:space-between}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px;text-align:left;min-width:1080px}th{background:#f5f7fb;padding:12px 10px;color:#637590;font-weight:500;white-space:nowrap;border-bottom:1px solid var(--line)}td{padding:12px 10px;border-bottom:1px solid #edf0f5;vertical-align:top}tr:last-child td{border-bottom:0}tr:hover td{background:#fbfcff}td input[type=text],td select{width:100%;font-size:12px;padding:7px}td textarea{width:100%;font-size:12px;min-height:35px;padding:7px}.title-cell{font-weight:600;font-size:13px;max-width:245px;line-height:1.65;overflow-wrap:anywhere}.event-title{border:0;padding:0;background:none;text-align:left;white-space:normal;color:#234eae;font-size:13px;font-weight:600}.event-title:hover{background:none;text-decoration:underline}.old-cats{max-width:185px;line-height:1.9;color:#66768d}.original-detail{margin-top:6px;font-size:11px;color:#8591a2;font-weight:400;max-width:230px}.original-detail summary{cursor:pointer}.original-detail p{white-space:pre-wrap;overflow-wrap:anywhere}.deleted{color:#a04c4c;background:#fff0f0}.source{font-size:10px;color:#7890a7;margin-top:5px}.confirm{accent-color:#3563d9;width:17px;height:17px}.override{font-size:10px;color:#aa6d26;background:#fff7e8;border-radius:4px;padding:2px 4px;display:inline-block;margin-top:5px}.pager{padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;color:#6a7d95;font-size:12px}.pager div{display:flex;gap:8px;align-items:center}.empty{text-align:center;color:#738299;padding:48px 20px}.category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:17px}.category-card{border:1px solid var(--line);border-radius:10px;padding:16px}.category-card h3{font-size:15px;margin:0 0 7px}.category-card code{font-size:10px;color:#8491a5;overflow-wrap:anywhere}.category-card p{font-size:12px;line-height:1.8;color:#6d7b90;margin:8px 0 14px}.category-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}.category-fields label{display:grid;gap:5px}.category-fields .wide{grid-column:1 / -1}.card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:13px;gap:8px}.footnote{font-size:11px;color:#8190a5;line-height:1.9;margin-top:13px}#saveStatus{font-size:11px;color:#8ba1bf;line-height:1.6}.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#192d4c;color:white;max-width:90vw;border-radius:9px;padding:12px 19px;box-shadow:0 7px 35px #152b4d2a;z-index:20;font-size:13px}.banner{padding:10px 15px;background:#fff7e8;color:#896426;border-bottom:1px solid #f1e6cb;display:flex;justify-content:space-between;gap:12px;font-size:12px}.number{font-variant-numeric:tabular-nums;white-space:nowrap}.danger{color:#a34242}.mobile-note{display:none}#fatal{margin:30px;color:#a33838;white-space:pre-wrap}@media(max-width:1050px){.layout{grid-template-columns:1fr}aside{display:none}main{padding:18px}.stats{grid-template-columns:repeat(2,1fr)}header{padding:20px;align-items:flex-start}.header-actions{max-width:290px}.category-grid{grid-template-columns:1fr}}@media(max-width:620px){header{display:block}h1{font-size:23px}.header-actions{justify-content:flex-start;max-width:none;margin-top:14px}.stats{gap:9px}.stat{padding:12px}.stat .value{font-size:23px}.toolbar input[type=search]{min-width:100%;}.tabs button{padding:11px 10px}.mobile-note{display:block}.pager{flex-wrap:wrap}}
+</style></head><body><div id="app"></div><div id="fatal" hidden></div><div id="toast" class="toast" hidden role="status"></div>
+<script type="application/json" id="review-data">__LIFEOS_REVIEW_DATA__</script>
+<script type="application/json" id="review-state">null</script>
+<script>
+'use strict';
+const DATA=JSON.parse(document.getElementById('review-data').textContent);
+const BASE_GROUPS=['工作','学习成长','生活自理','饮食','清醒休息','睡眠','运动','娱乐','私人社交','出行','待确认'];
+const NATURE={core:'核心创作',support:'事务支撑',recovery:'恢复滋养',leisure:'消遣'};
+const records=new Map(DATA.records.map(r=>[r.id,r]));
+const oldCategories=new Map(DATA.categories.map(c=>[c.key,c]));
+const titleIndex=new Map();for(const row of DATA.records){if(!titleIndex.has(row.title))titleIndex.set(row.title,[]);titleIndex.get(row.title).push(row);}
+const blank=()=>({group:'',category:'',note:'',keywords:'',confirmed:false});
+const emptyState=()=>({format:'lifeos-time-review-state/v1',datasetId:DATA.datasetId,groups:[...BASE_GROUPS],titles:{},records:{},categories:{},revision:0,updatedAt:''});
+function sanitize(value){
+ if(!value||value.format!=='lifeos-time-review-state/v1'||value.datasetId!==DATA.datasetId)throw Error('整理结果与这份原始数据不匹配。');
+ const result=emptyState();
+ if(!Array.isArray(value.groups)||value.groups.length>100||value.groups.some(x=>typeof x!=='string'||!x.trim()||x.length>40))throw Error('大类清单格式不正确。');
+ result.groups=[...new Set(value.groups)];result.revision=Number.isSafeInteger(value.revision)&&value.revision>=0?value.revision:0;
+ result.updatedAt=typeof value.updatedAt==='string'&&Number.isFinite(Date.parse(value.updatedAt))?value.updatedAt:'';
+ for(const [name,index] of [['titles',titleIndex],['records',records],['categories',oldCategories]]){
+  result[name]=Object.create(null);const entries=value[name]??{};
+  if(typeof entries!=='object'||Array.isArray(entries)||Object.keys(entries).length>index.size)throw Error('整理行格式不正确。');
+  for(const [key,item] of Object.entries(entries)){
+   if(!index.has(key)||!item||typeof item!=='object')throw Error('整理结果包含未知记录。');
+   const clean=blank();for(const field of ['group','category','note','keywords']){
+    const text=item[field]??'';if(typeof text!=='string'||text.length>(field==='note'||field==='keywords'?3000:120))throw Error('整理字段过长或格式不正确。');clean[field]=text;
+   }
+   if(clean.group&&!result.groups.includes(clean.group))throw Error('整理结果引用了不存在的大类。');
+   clean.confirmed=item.confirmed===true&&!!clean.group&&!!clean.category.trim();result[name][key]=clean;
+  }
+ }
+ return result;
+}
+const STORAGE='lifeos-time-review:'+DATA.datasetId;
+let state=emptyState(),cacheAvailable=true;
+const candidates=[];let loadWarning='',embeddedRevision=0;
+try{const embedded=JSON.parse(document.getElementById('review-state').textContent);if(embedded){const valid=sanitize(embedded);candidates.push(valid);embeddedRevision=valid.revision;}}catch{loadWarning='文件中的草稿格式异常，请保留原文件以便核对。';}
+try{const saved=JSON.parse(localStorage.getItem(STORAGE)||'null');if(saved)candidates.push(sanitize(saved));}catch{cacheAvailable=false;loadWarning=loadWarning||'浏览器暂存不可用或已损坏，已保留文件内的可用草稿。';}
+candidates.sort((a,b)=>(Date.parse(b.updatedAt)||0)-(Date.parse(a.updatedAt)||0));if(candidates.length)state=candidates[0];
+state=sanitize(state);
+let view='titles',page=1,search='',status='all',originalFilter='',showDeleted=false,focusedTitle=null,lastExportRevision=embeddedRevision;
+let undo=[],saveTimer,toastTimer,revisionCounter=state.revision;
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=new Intl.DateTimeFormat('sv-SE',{timeZone:DATA.timezone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+function localCategoryName(local){try{const value=JSON.parse(local?.category_json||'{}');return typeof value==='string'?value:value?.name||'未归类';}catch{return '原分类需核对';}}
+function date(value){const d=new Date(value);return Number.isFinite(d.getTime())?fmt.format(d):'时间待核对';}
+function minutes(row){if(!row.end)return null;const n=Math.floor((Date.parse(row.end)-Date.parse(row.start))/60000)-Number(row.deductionMinutes||0);return Number.isFinite(n)&&n>=0?n:null;}
+const duration=n=>n===null?'未计入':n>=60?`${Math.floor(n/60)}小时${n%60?`${n%60}分`:''}`:`${n}分`;
+const own=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
+function assignment(row){return own(state.records,row.id)?state.records[row.id]:state.titles[row.title]??blank();}
+const complete=a=>!!a.group&&!!a.category.trim();
+function toast(text){const n=document.getElementById('toast');n.textContent=text;n.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.hidden=true,5000);}
+function checkpoint(){undo.push(JSON.stringify(state));if(undo.length>12)undo.shift();}
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(STORAGE,JSON.stringify(state));cacheAvailable=true;}catch{cacheAvailable=false;}updateSummary();},200);}
+function touch(){state.revision=Math.max(state.revision,revisionCounter)+1;revisionCounter=state.revision;state.updatedAt=new Date().toISOString();save();updateSummary();}
+function groups(selected=''){return `<option value="">选择大类</option>`+state.groups.map(g=>`<option ${g===selected?'selected':''} value="${esc(g)}">${esc(g)}</option>`).join('');}
+function leafOptions(){const all=new Set(DATA.categories.map(c=>c.name));for(const m of ['titles','records','categories'])for(const a of Object.values(state[m]))if(a.category.trim())all.add(a.category.trim());return [...all].sort().map(x=>`<option value="${esc(x)}"></option>`).join('');}
+function field(map,key,a){return `data-map="${map}" data-key="${esc(key)}"`;}
+function editors(map,key,a){const attrs=field(map,key,a);return `<td style="min-width:132px"><select aria-label="新大类" data-field="group" ${attrs}>${groups(a.group)}</select></td><td style="min-width:150px"><input type="text" aria-label="新细分类" maxlength="120" data-field="category" list="leaf-options" placeholder="自行填写，如：如厕" value="${esc(a.category)}" ${attrs}></td><td style="min-width:170px"><textarea aria-label="分类备注" maxlength="3000" data-field="note" placeholder="归类依据、例外或疑问" rows="1" ${attrs}>${esc(a.note)}</textarea></td><td style="min-width:60px;text-align:center"><input class="confirm" type="checkbox" aria-label="确认这项分类" data-field="confirmed" ${attrs} ${a.confirmed?'checked':''} ${complete(a)?'':'disabled'}></td>`;}
+function filtered(){return DATA.records.filter(r=>{
+ if(!showDeleted&&r.deletedAt)return false;if(focusedTitle!==null&&r.title!==focusedTitle)return false;
+ if(originalFilter&&r.originalCategory!==originalFilter)return false;
+ const a=assignment(r);if(status==='unfilled'&&complete(a))return false;if(status==='filled'&&!complete(a))return false;
+ if(status==='confirmed'&&!a.confirmed)return false;if(status==='unconfirmed'&&a.confirmed)return false;
+ const hay=[r.title,r.originalCategory,r.note,r.project,date(r.start),a.group,a.category,a.note].join(' ').toLowerCase();
+ return !search||hay.includes(search.toLowerCase());
+});}
+function shell(){
+ document.getElementById('app').innerHTML=`<header><div><small>LIFEOS / PERSONAL TIME REVIEW</small><h1>时间分类，重新理清。</h1><p>原始事件与类别完整保留。由你填写新分类，整理后保存文件返还。</p></div><div><div class="header-actions"><button id="import">导入整理 JSON</button><button id="json">导出 JSON</button><button id="html" class="primary">保存可返还的 HTML</button></div><p id="saveStatus" style="margin-top:10px;text-align:right"></p></div></header>
+ <div class="layout"><aside><div class="step"><b>1</b><div><strong>先定大类和细类</strong><span class="muted">在“类别字典”填写你的划分规则，或直接在事件表中填写。</span></div></div><div class="step"><b>2</b><div><strong>同名批量，逐条例外</strong><span class="muted">点击事件名看每次记录。逐条填写的分类优先。</span></div></div><div class="step"><b>3</b><div><strong>保存文件，再返还</strong><span class="muted">点击右上角保存HTML。整理可分多次完成，不必全部填完。</span></div></div><div class="aside-box"><h3>可用大类 · 可以自行增加</h3><div id="groupList" class="group-list"></div><input id="newGroup" style="width:100%" maxlength="40" placeholder="输入自定义大类" aria-label="自定义大类"><button id="addGroup" class="small" style="width:100%;margin-top:7px">＋ 添加大类</button></div><div class="aside-box"><h3>整理工具</h3><button id="undo" class="small" style="width:100%">撤销上一次操作</button><p class="muted">页面只编辑整理草稿。不会写入你的本机账本、微信或云端数据库。</p><p class="muted">本文件含私人记录，请保留在自己的设备上。</p></div></aside>
+ <main><div class="stats"><div class="stat"><div class="label">完整时间记录</div><div class="value">${DATA.summary.totalRecords.toLocaleString()}</div><div class="muted">本机 ${DATA.summary.localRecords} ＋ 云端新增 ${DATA.summary.cloudNewRecords}</div></div><div class="stat"><div class="label">原始事件名称</div><div class="value">${DATA.summary.uniqueEvents}</div><div class="muted">同名合并显示，全部出现均保留</div></div><div class="stat"><div class="label">原类别定义</div><div class="value">${DATA.summary.categoryDefinitions}</div><div class="muted">保留原关键词、性质和停用状态</div></div><div class="stat"><div class="label">有效记录已确认分类</div><div class="value" id="completion"></div><div class="muted" id="completionDetail"></div><div class="progress"><i id="progress"></i></div></div></div>
+ <div class="notice">所有“新大类 / 新细分类”均留空，由你决定。<b>“休息”在不同时段可能含义不同</b>，请点事件名逐条核对。<br>默认隐藏 ${DATA.summary.deletedRecords} 条已删除记录；勾选“包含已删除”即可查看。全部记录始终包含在保存文件中。</div>
+ <nav class="tabs" aria-label="整理视图"><button data-view="titles">按事件整理</button><button data-view="records">全部时间段</button><button data-view="categories">类别字典</button></nav><section class="panel"><div class="toolbar"><input id="search" type="search" placeholder="搜索事件、原分类、日期或备注" aria-label="搜索记录"><select id="status" aria-label="填写状态"><option value="all">全部状态</option><option value="unfilled">尚未填完整</option><option value="filled">已填完整</option><option value="unconfirmed">尚未确认</option><option value="confirmed">已确认</option></select><select id="oldCategory" aria-label="原分类"><option value="">全部原分类</option>${[...new Set(DATA.records.map(r=>r.originalCategory))].sort().map(c=>`<option>${esc(c)}</option>`).join('')}</select><label class="check-label"><input type="checkbox" id="deleted">包含已删除</label></div><div id="focusBanner"></div><div class="subbar"><span id="resultCount"></span><span id="viewHelp"></span></div><div id="content"></div><div class="pager" id="pager"></div></section><p class="footnote">记录时区：北京时间（Asia/Shanghai）· 快照生成：${date(DATA.createdAt)}<br>浏览器暂存不等于保存文件。移动文件或返还前，请点击“保存可返还的HTML”。原始时间、原分类和来源编号始终随文件保留。</p><datalist id="leaf-options"></datalist><input id="importFile" type="file" accept=".json,application/json" hidden></main></div>`;
+ document.getElementById('search').value=search;document.getElementById('status').value=status;document.getElementById('oldCategory').value=originalFilter;document.getElementById('deleted').checked=showDeleted;
+ document.getElementById('search').addEventListener('input',e=>{search=e.target.value;page=1;render();});
+ document.getElementById('status').addEventListener('change',e=>{status=e.target.value;page=1;render();});
+ document.getElementById('oldCategory').addEventListener('change',e=>{originalFilter=e.target.value;page=1;render();});
+ document.getElementById('deleted').addEventListener('change',e=>{showDeleted=e.target.checked;page=1;render();});
+ document.getElementById('html').onclick=exportHtml;document.getElementById('json').onclick=exportJson;
+ document.getElementById('import').onclick=()=>document.getElementById('importFile').click();document.getElementById('importFile').onchange=importJson;
+ document.getElementById('addGroup').onclick=()=>{const input=document.getElementById('newGroup'),value=input.value.trim();if(!value)return;if(state.groups.length>=100)return toast('大类已达到100项上限。');if(state.groups.includes(value))return toast('这个大类已经存在。');checkpoint();state.groups.push(value);input.value='';touch();render();};
+ document.getElementById('undo').onclick=()=>{if(!undo.length)return toast('还没有可撤销的操作。');state=sanitize(JSON.parse(undo.pop()));touch();render();toast('已撤销上一次整理操作。');};
+ document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;page=1;focusedTitle=null;render();});
+ document.getElementById('content').addEventListener('input',edit);document.getElementById('content').addEventListener('change',edit);
+ document.getElementById('content').addEventListener('click',actions);
+ render();
+}
+function updateSummary(){
+ const active=DATA.records.filter(r=>!r.deletedAt),count=active.filter(r=>assignment(r).confirmed).length;
+ document.getElementById('completion').textContent=`${count.toLocaleString()} / ${active.length.toLocaleString()}`;
+ document.getElementById('completionDetail').textContent=`已填完整 ${active.filter(r=>complete(assignment(r))).length} 条 · 不含已删除记录`;
+ document.getElementById('progress').style.width=(active.length?count/active.length*100:0)+'%';
+ document.getElementById('saveStatus').textContent=!cacheAvailable?'浏览器暂存不可用 · 请保存HTML文件':state.revision>lastExportRevision?'草稿已变更 · 浏览器暂存中 · 请保存HTML文件':'可继续整理 · 保存HTML后可跨设备返还';
+ document.getElementById('undo').disabled=!undo.length;
+}
+function render(){
+ document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+ document.getElementById('groupList').innerHTML=state.groups.map(g=>`<span class="chip">${esc(g)}</span>`).join('');document.getElementById('leaf-options').innerHTML=leafOptions();
+ document.getElementById('focusBanner').innerHTML=focusedTitle!==null?`<div class="banner"><span>正在逐条整理：<b>${esc(focusedTitle)}</b>。逐条设置优先于同名批量规则。</span><button id="clearFocus" class="small">查看全部事件</button></div>`:'';
+ const clear=document.getElementById('clearFocus');if(clear)clear.onclick=()=>{focusedTitle=null;page=1;render();};
+ if(view==='categories'){renderCategories();updateSummary();return;}
+ const rows=filtered(),limit=view==='titles'?40:35;
+ let items=rows;if(view==='titles'){
+  const found=new Map();for(const row of rows){if(!found.has(row.title))found.set(row.title,[]);found.get(row.title).push(row);}items=[...found.entries()].sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0],'zh'));
+ }else items=[...rows].sort((a,b)=>b.start.localeCompare(a.start));
+ const pages=Math.max(1,Math.ceil(items.length/limit));page=Math.max(1,Math.min(page,pages));const slice=items.slice((page-1)*limit,page*limit);
+ document.getElementById('resultCount').textContent=view==='titles'?`筛选后 ${items.length} 种事件 · 涉及 ${rows.length} 条记录`:`筛选后 ${rows.length} 条记录`;
+ document.getElementById('viewHelp').textContent=view==='titles'?'同名批量规则作用于该事件的全部出现；逐条设置优先':'原始记录只读；空白逐条设置继承同名批量规则';
+ let body='';
+ if(view==='titles')for(const [title,list] of slice){
+  const a=state.titles[title]??blank(),cats=new Map();for(const r of list)cats.set(r.originalCategory,(cats.get(r.originalCategory)||0)+1);
+  const all=titleIndex.get(title),confirmed=all.filter(r=>assignment(r).confirmed).length,overrides=all.filter(r=>own(state.records,r.id)).length;
+  body+=`<tr><td class="title-cell"><button class="event-title" data-detail="${esc(title)}">${esc(title)}</button><div class="source">点事件名，查看每次记录</div>${overrides?`<span class="override">${overrides} 条有逐条设置</span>`:''}</td><td class="number">${list.length}<div class="source">已确认 ${confirmed}/${all.length}</div></td><td class="old-cats">${[...cats].map(([name,n])=>`${esc(name)} <span class="number">×${n}</span>`).join('<br>')}</td><td class="number">${duration(list.reduce((n,r)=>n+(minutes(r)??0),0))}</td>${editors('titles',title,a)}</tr>`;
+ }else for(const r of slice){
+  const a=assignment(r),has=own(state.records,r.id),local=r.localOriginal;
+  body+=`<tr><td class="number">${esc(date(r.start))}<div class="source">${r.end?`至 ${esc(date(r.end))}`:'进行中 · 结束点未填'}</div><div class="source">${r.end?duration(minutes(r)):'未纳入闭合时长'}${r.deductionMinutes?` · 扣减${r.deductionMinutes}分`:''}</div></td><td class="title-cell">${esc(r.title)}<div class="source">${r.source==='local-lifeos'?'本机历史':'微信新增'}${r.deletedAt?' · <span class="chip deleted">已删除</span>':''}</div><details class="original-detail"><summary>原备注 / 项目 / 来源</summary><p>备注：${esc(r.note||'无')}<br>项目：${esc(r.project||'无')}<br>标签：${esc((r.tags||[]).join('、'))}<br>记录ID：${esc(r.id)}${local?`<br>本机原ID：${esc(local.id)}`:''}</p></details></td><td class="old-cats">${esc(r.originalCategory)}<div class="source">${esc(NATURE[r.originalNature]||'性质未设置')}</div>${local&&localCategoryName(local)!==r.originalCategory?`<div class="source">本机原分类：${esc(localCategoryName(local))}</div>`:''}${has?`<span class="override">逐条覆盖</span><br><button class="small" data-inherit="${esc(r.id)}" style="margin-top:6px">改用同名规则</button>`:''}</td>${editors('records',r.id,a)}</tr>`;
+ }
+ const heads=view==='titles'?['原始事件名称','记录数','原分类分布','闭合净时长','新大类','新细分类','分类备注','确认']:['时间（北京）','原始事件','原分类','新大类','新细分类','分类备注','确认'];
+ document.getElementById('content').innerHTML=body?`<div class="table-wrap"><table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`:'<div class="empty">没有符合当前筛选的记录。</div>';
+ document.getElementById('pager').innerHTML=`<span>第 ${(page-1)*limit+(items.length?1:0)}–${Math.min(page*limit,items.length)} 项，共 ${items.length} 项；全部原文始终保留在文件内。</span><div><button class="small" id="prev" ${page===1?'disabled':''}>上一页</button><span>${page} / ${pages}</span><button class="small" id="next" ${page===pages?'disabled':''}>下一页</button></div>`;
+ document.getElementById('prev').onclick=()=>{page--;render();};document.getElementById('next').onclick=()=>{page++;render();};updateSummary();
+}
+function renderCategories(){
+ const list=DATA.categories.filter(c=>!search||[c.name,c.key,...c.keywords].join(' ').toLowerCase().includes(search.toLowerCase()));
+ document.getElementById('resultCount').textContent=`原类别定义 ${DATA.categories.length} 项 · 当前显示 ${list.length} 项`;
+ document.getElementById('viewHelp').textContent='保留所有旧定义；应用映射时只填写尚未设置新分类的记录';
+ document.getElementById('pager').innerHTML='';
+ document.getElementById('content').innerHTML=`<div class="category-grid">${list.map(c=>{
+  const a=state.categories[c.key]??blank(),attrs=field('categories',c.key,a),local=c.local,cloud=c.cloud;
+  return `<article class="category-card"><h3>${esc(c.name)} <span class="chip">${c.recordCount} 条</span> ${local?.deletedAt||cloud?.is_active===false?'<span class="chip deleted">含停用定义</span>':''}</h3><code>${esc(c.key)}</code><p>来源：${local?'本机定义 ':''}${cloud?'云端定义':''}<br>原性质：${esc(NATURE[c.nature]||'未设置')}<br>原关键词：${esc(c.keywords.join('、')||'无')}${local&&cloud&&(local.name!==cloud.name||local.nature!==cloud.nature)?`<br>云端定义：${esc(cloud.name)} / ${esc(NATURE[cloud.nature]||'未设置')}`:''}</p><div class="category-fields"><label>新大类<select aria-label="类别新大类" data-field="group" ${attrs}>${groups(a.group)}</select></label><label>新细分类<input type="text" aria-label="类别新细分类" maxlength="120" list="leaf-options" data-field="category" value="${esc(a.category)}" ${attrs}></label><label class="wide">新识别词（可选）<input type="text" aria-label="新识别词" maxlength="3000" data-field="keywords" value="${esc(a.keywords)}" placeholder="例如：拉屎、如厕、上厕所" ${attrs}></label><label class="wide">定义 / 包含什么 / 不包含什么<textarea rows="2" aria-label="分类规则说明" maxlength="3000" data-field="note" ${attrs}>${esc(a.note)}</textarea></label></div><div class="card-bottom"><label class="check-label"><input type="checkbox" class="confirm" aria-label="确认类别映射" data-field="confirmed" ${attrs} ${a.confirmed?'checked':''} ${complete(a)?'':'disabled'}>确认规则</label><button class="small" data-apply-category="${esc(c.key)}">应用到未分类记录</button></div></article>`;
+ }).join('')}</div>`;
+}
+function edit(event){
+ const node=event.target;if(!node.dataset.field)return;
+ if((node.tagName==='SELECT'||node.type==='checkbox')&&event.type!=='change')return;
+ if(node.tagName!=='SELECT'&&node.type!=='checkbox'&&event.type!=='input')return;
+ const {map,key,field}=node.dataset;if(!['titles','records','categories'].includes(map))return;
+ checkpoint();
+ const initial=map==='records'?assignment(records.get(key)):state[map][key]??blank();
+ const a={...blank(),...initial,[field]:field==='confirmed'?node.checked:node.value};
+ if(field!=='confirmed')a.confirmed=false;if(!complete(a))a.confirmed=false;
+ state[map][key]=a;touch();
+ const parent=node.closest('tr,article');if(parent){const box=parent.querySelector('[data-field="confirmed"]');box.disabled=!complete(a);box.checked=a.confirmed;}
+ if(field==='confirmed')render();
+}
+function actions(event){
+ const node=event.target.closest('button');if(!node)return;
+ if(node.hasAttribute('data-detail')){focusedTitle=node.dataset.detail;view='records';search='';document.getElementById('search').value='';page=1;render();}
+ if(node.dataset.inherit){checkpoint();delete state.records[node.dataset.inherit];touch();render();}
+ if(node.dataset.applyCategory){
+  const key=node.dataset.applyCategory,a=state.categories[key];if(!a||!complete(a))return toast('先填写这个旧类别的新大类和新细分类。');
+  const rows=DATA.records.filter(r=>r.originalCategoryKey===key&&!complete(assignment(r)));if(!rows.length)return toast('没有尚未填写的对应记录，已有分类不会被覆盖。');
+  checkpoint();for(const r of rows)state.records[r.id]={...a};touch();render();toast(`已为 ${rows.length} 条未填写记录应用分类，可撤销。`);
+ }
+}
+function safeJson(value){return JSON.stringify(value).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');}
+function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+function packageData(){return {format:'lifeos-time-review-result/v1',datasetId:DATA.datasetId,exportedAt:new Date().toISOString(),data:DATA,state,
+ records:DATA.records.map(r=>({...r,proposed:{...assignment(r)},assignmentSource:own(state.records,r.id)?'record':own(state.titles,r.title)?'title':'unfilled'}))};}
+function exported(){lastExportRevision=state.revision;updateSummary();toast('已生成下载文件，请保留下载后的文件；返还HTML或JSON均可。');}
+function exportJson(){download(new Blob([JSON.stringify(packageData(),null,2)],{type:'application/json;charset=utf-8'}),'LifeOS-时间分类整理结果.json');exported();}
+function exportHtml(){
+ const copy=document.documentElement.cloneNode(true);copy.querySelector('#review-state').textContent=safeJson(state);copy.querySelector('#app').innerHTML='';copy.querySelector('#toast').hidden=true;
+ download(new Blob(['<!doctype html>\n'+copy.outerHTML],{type:'text/html;charset=utf-8'}),'LifeOS-时间分类-已整理.html');exported();
+}
+async function importJson(event){
+ const file=event.target.files[0];if(!file)return;
+ try{
+  if(file.size>20000000)throw Error('文件超过20MB，请确认选择的是本次整理结果。');
+  const parsed=JSON.parse(await file.text());if(parsed.datasetId!==DATA.datasetId)throw Error('这份结果属于另一批原始记录，不能混入。');
+  const next=sanitize(parsed.state??parsed);checkpoint();state=next;touch();render();toast('已导入整理结果，原始记录完整保留。');
+ }catch(error){toast(error.message||'导入失败，请检查文件。');}finally{event.target.value='';}
+}
+window.addEventListener('beforeunload',event=>{if(state.revision>lastExportRevision){event.preventDefault();event.returnValue='';}});
+try{shell();if(loadWarning)toast(loadWarning);}catch(error){document.getElementById('fatal').hidden=false;document.getElementById('fatal').textContent='页面初始化失败。请保留此文件并告知错误：'+error.message;}
+</script></body></html>

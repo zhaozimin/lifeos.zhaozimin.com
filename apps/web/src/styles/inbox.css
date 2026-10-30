@@ -1,0 +1,143 @@
+/* [INPUT]: 依赖 --zzm-* 令牌与 base.css 的 .card。
+ * [OUTPUT]: 原话收件箱的说明条、筛选条、原话卡与解析状态。
+ * [POS]: InboxView 的唯一样式；筛选键由 .zzm-btn 提供。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md */
+.cloud-legacy {
+  .inbox-intro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    color: var(--zzm-text-4);
+    font-size: 12.5px;
+    line-height: 20px;
+  }
+  .inbox-intro > svg {
+    flex-shrink: 0;
+    color: var(--zzm-muted);
+  }
+  .inbox-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .inbox-filters {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .inbox-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    gap: 16px;
+  }
+
+  .raw-card {
+    margin: 0;
+  }
+  .raw-card > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--zzm-muted);
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .raw-card > header > span,
+  .raw-card > header > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .raw-text {
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 24px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* 状态是徽章：胶囊、不可点。只有待补充与失败用朱字，那是需要你回微信处理的 */
+  .status {
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--zzm-chip);
+    color: var(--zzm-muted);
+    font-size: 11px;
+    line-height: 20px;
+  }
+  .status.parsed {
+    color: var(--zzm-ok-ink);
+  }
+  .status.failed,
+  .status.awaiting_clarification {
+    background: var(--zzm-accent-soft);
+    color: var(--zzm-accent-ink);
+  }
+
+  .clarify {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    border-left: 2px solid var(--zzm-accent);
+    border-radius: 0 8px 8px 0;
+    background: var(--zzm-fill);
+    font-size: 12.5px;
+    line-height: 20px;
+  }
+  .clarify svg {
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+
+  .raw-card > footer {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--zzm-hairline-2);
+    color: var(--zzm-muted);
+    font-size: 11px;
+    line-height: 16px;
+  }
+  .raw-card summary {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    list-style: none;
+    cursor: pointer;
+  }
+  .raw-card details {
+    text-align: right;
+  }
+  .raw-card code {
+    display: block;
+    margin-top: 8px;
+    font-family: var(--zzm-mono);
+    font-size: 10.5px;
+    word-break: break-all;
+  }
+
+  @media (max-width: 760px) {
+    .inbox-list {
+      grid-template-columns: 1fr;
+    }
+    .inbox-toolbar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .raw-text {
+      font-size: 13px;
+      line-height: 20px;
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@lifeos/ops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "wechat:login": "node wechat-login.mjs",
+    "prepare:wechat": "node patch-wechat-sdk.mjs",
+    "check": "node --check wechat-login.mjs && node --check patch-wechat-sdk.mjs",
+    "test": "node --test wechat-sdk-patch.test.mjs && python3 backup_tools_test.py"
+  },
+  "dependencies": {
+    "@wechatbot/wechatbot": "2.2.0",
+    "qrcode": "1.5.4"
+  }
+}

@@ -1,0 +1,408 @@
+<!doctype html>
+<!--
+[INPUT]: 早期产品讨论；部分技术判断已由行动方案修正。
+[OUTPUT]: 历史推演记录，不作为部署依据。
+[POS]: docs 的历史草案；施工遵循行动方案.html。
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LifeOS 随身管家方案</title>
+<style>
+/* ============================================================
+   设计令牌 · 亮色 / 暗色
+   ============================================================ */
+:root{
+  --bg:#f7f6f2; --panel:#ffffff; --ink:#1d1d1b; --muted:#6b6a64; --line:#e3e1d9;
+  --accent:#c2410c; --accent-soft:#fff1e8; --ok:#15803d; --ok-soft:#ecfdf3;
+  --warn:#b45309; --warn-soft:#fffbeb; --bad:#b91c1c; --bad-soft:#fef2f2;
+  --blue:#1d4ed8; --blue-soft:#eff4ff; --code:#f1efe8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141413; --panel:#1d1d1b; --ink:#ecebe6; --muted:#a3a198; --line:#2f2e2a;
+    --accent:#fb923c; --accent-soft:#2b1a10; --ok:#4ade80; --ok-soft:#0f2417;
+    --warn:#fbbf24; --warn-soft:#2a210c; --bad:#f87171; --bad-soft:#2a1212;
+    --blue:#93b4ff; --blue-soft:#141d33; --code:#262522;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141413; --panel:#1d1d1b; --ink:#ecebe6; --muted:#a3a198; --line:#2f2e2a;
+  --accent:#fb923c; --accent-soft:#2b1a10; --ok:#4ade80; --ok-soft:#0f2417;
+  --warn:#fbbf24; --warn-soft:#2a210c; --bad:#f87171; --bad-soft:#2a1212;
+  --blue:#93b4ff; --blue-soft:#141d33; --code:#262522;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.75 -apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:48px 16px 96px}
+h1{font-size:34px;line-height:1.25;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:23px;margin:56px 0 14px;padding-top:12px;border-top:1px solid var(--line)}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:8px 0}
+.sub{color:var(--muted);margin:0 0 28px}
+.meta{font-size:13px;color:var(--muted)}
+code{background:var(--code);padding:1px 6px;border-radius:4px;font-size:.9em;font-family:ui-monospace,Menlo,monospace}
+pre{background:var(--code);padding:14px 16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.6}
+a{color:var(--blue)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:14px 0}
+.tldr{border-color:var(--accent);background:var(--accent-soft)}
+.tldr ol{margin:8px 0 0;padding-left:22px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:6px;vertical-align:2px}
+.t-ok{background:var(--ok-soft);color:var(--ok)}
+.t-warn{background:var(--warn-soft);color:var(--warn)}
+.t-bad{background:var(--bad-soft);color:var(--bad)}
+.t-blue{background:var(--blue-soft);color:var(--blue)}
+table{width:100%;border-collapse:collapse;font-size:14.5px;margin:10px 0}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px}
+.tbl{overflow-x:auto}
+.q{padding:14px 0;margin:0;border-bottom:1px solid var(--line)}
+.q b{color:var(--accent)}
+svg text{font-family:-apple-system,"PingFang SC",system-ui,sans-serif}
+.diagram{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto}
+.diagram svg{display:block;min-width:720px;width:100%;height:auto}
+.phase{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.phase .n{font-weight:700;color:var(--accent)}
+.phase .n small{display:block;color:var(--muted);font-weight:400}
+ul{padding-left:22px;margin:6px 0}
+li{margin:3px 0}
+.toc{font-size:14px;columns:2;column-gap:28px}
+@media (max-width:600px){ .toc{columns:1} h1{font-size:27px} .phase{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="meta">子民 · LifeOS 随身管家 · 实现方案 v0.1 · 2026-10-24</p>
+<div class="card tldr"><b>历史草案，已归档。</b>当前施工以 <a href="行动方案.html">行动方案</a> 为准。用户已指定官方 Antigravity CLI，独立 CLI 支持 Linux 和无界面调用。本文的 Hermes、Telegram 路线不再执行。</div>
+<h1>24 小时随身管家：可以做，但要换掉一个零件</h1>
+<p class="sub">目标：手机随时说一句话，管家记下时间、开销、身体和生活。数据进 Supabase，长期记忆进 MemOS，你在自己的网站上用三重验证登录看面板。</p>
+
+<!-- ============================================================
+     一、结论
+     ============================================================ -->
+<div class="card tldr">
+<b>结论</b>
+<ol>
+  <li><b>整体方案可以实现。</b>所有零件都有现成的开源项目或官方 API，不需要从零造轮子。</li>
+  <li><b>旧结论作废。</b>独立的 <a href="https://antigravity.google/docs/cli/headless/">Antigravity CLI 官方支持无界面调用</a>。CLI 已安装，Gemini 3.8 调用已验收；微信后端的正式解析接入方式待确认。</li>
+  <li><b>区分产品形态。</b>桌面 IDE 留在本机；官方独立 CLI 以 VPS 的 lifeos 专用用户运行。</li>
+  <li><b>Supabase 免费版不做自动备份</b>，项目 7 天没人访问会被暂停。"安全保留"必须靠 VPS 每晚自己导出加密备份。</li>
+  <li>"24 小时录音"是最难的一环。<b>手机无法稳定地全天后台录音</b>（尤其是 iPhone），要配一个录音挂件。推荐 Omi，因为它有实时转写 Webhook。</li>
+</ol>
+</div>
+
+<div class="card">
+<b>目录</b>
+<div class="toc">
+<div>1. 你没问但必须知道的事</div>
+<div>2. 总体架构</div>
+<div>3. 四条数据管线</div>
+<div>4. 数据库设计</div>
+<div>5. 三重登录安全</div>
+<div>6. 可视化面板</div>
+<div>7. 分阶段路线图</div>
+<div>8. 每月成本</div>
+<div>9. 风险清单</div>
+<div>10. 需要你拍板的问题</div>
+</div>
+</div>
+
+<!-- ============================================================
+     二、四象限洞察
+     ============================================================ -->
+<h2>1. 你没问但必须知道的事</h2>
+<p>下面这些点，不在早期定下来，后面会导致返工。</p>
+
+<div class="q"><b>① 更正：独立 CLI 与桌面 IDE 必须分开判断。</b>
+独立 Antigravity CLI 已提供官方 Linux 安装器、SSH OAuth 和无界面 JSON 输出。个人订阅不支持将 CLI 封装进第三方应用，业务接入须单独确认授权。旧稿关于缺少官方无界面模式的判断作废，后文保留历史推演。</div>
+
+<div class="q"><b>② "Memos" 有两个，别装错。</b>
+你给的链接是 <b>MemTensor/MemOS</b>，它是给 AI 用的"记忆操作系统"，存的是语义记忆，供 Agent 检索。另一个同名项目 <b>usememos/memos</b> 是给人写的笔记 App。本方案用的是前者。注意：MemOS 自建版要同时跑 Neo4j 和 Qdrant 两个数据库，内存最好在 4GB 以上。VPS 太小的话，先用 MemOS 云服务，或者先用 Supabase 自带的 pgvector 代替。</div>
+
+<div class="q"><b>③ 唯一真源（Single Source of Truth）。</b>
+你会有本机 LifeOS、VPS 管家、Supabase、MemOS 四个地方存数据。必须规定：<b>Supabase 是唯一真源</b>。MemOS 只放从 Supabase 提炼出来的记忆，丢了可以重建。本机 LifeOS 通过 Supabase MCP 读写，不再自己保存一份账本。不这样定，三个月后你会看到两个对不上的账本。</div>
+
+<div class="q"><b>④ 免费 Supabase 的三个坑。</b>
+(a) 数据库只有 500MB。(b) 没有自动备份。(c) 7 天不活跃会被暂停。<br>
+对策：只存文字，不存音频（一天录音约 150MB，三天就满）。VPS 每天定时拉数据，项目自然保持活跃。每晚 <code>pg_dump</code> 一次，加密后存到 Cloudflare R2 或你的 Mac。另外，Supabase 从 2026-10-30 起要求免费项目给 PostgREST 显式授权，建表时就写好 GRANT 语句。</div>
+
+<div class="q"><b>⑤ 录音的法律和隐私。</b>
+全天录音一定会录到别人的声音。自己存档、自己看，一般问题不大。但不要公开或外传，在会议、医院等场合要主动关掉。技术上建议：<b>转写完成后删除原始音频，只保留文字和摘要</b>。这样既省空间，泄露时伤害也小。</div>
+
+<div class="q"><b>⑥ "二级密钥"有更好的做法。</b>
+自己发明一个"第二密码"，安全性其实不如行业标准。推荐的三重验证：<b>密码 + TOTP 动态码 + Passkey（Face ID / 指纹）</b>。外面再加一层 Cloudflare Access 拦截陌生访问。这样别人连登录页都看不到。详见第 5 节。</div>
+
+<div class="q"><b>⑦ 记账和时间统计的关键不是 AI，是分类表。</b>
+柳比歇夫法真正的价值，在于长期使用同一套分类：第一类工作、第二类工作、休息、通勤等等。AI 只负责把"刚吃了个午饭 38 块，花了 40 分钟"拆成两条结构化记录。分类表要先由你定好，再写进 Hermes 的 skill 里。分类一旦变来变去，年度统计就没有意义了。</div>
+
+<!-- ============================================================
+     三、架构
+     ============================================================ -->
+<h2>2. 总体架构</h2>
+<p>分四层：<b>采集层</b>（手机、挂件、Whoop）→ <b>处理层</b>（VPS 上的 Hermes）→ <b>存储层</b>（Supabase + MemOS）→ <b>展示层</b>（你的网站）。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 900 470" role="img" aria-label="系统架构图">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+    </marker>
+  </defs>
+  <style>
+    .bx{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+    .hl{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+    .db{fill:var(--blue-soft);stroke:var(--blue);stroke-width:1.5}
+    .t{fill:var(--ink);font-size:14px;font-weight:600}
+    .s{fill:var(--muted);font-size:12px}
+    .lb{fill:var(--muted);font-size:12px;font-weight:600;letter-spacing:.08em}
+    .ln{stroke:var(--muted);stroke-width:1.4;fill:none;marker-end:url(#ar)}
+  </style>
+
+  <text x="20" y="28" class="lb">采集层</text>
+  <rect x="20" y="40" width="190" height="62" rx="10" class="bx"/>
+  <text x="34" y="66" class="t">手机 · Telegram</text>
+  <text x="34" y="86" class="s">语音/文字：记账、时间</text>
+
+  <rect x="20" y="118" width="190" height="62" rx="10" class="bx"/>
+  <text x="34" y="144" class="t">录音挂件 Omi</text>
+  <text x="34" y="164" class="s">全天转写 → Webhook</text>
+
+  <rect x="20" y="196" width="190" height="62" rx="10" class="bx"/>
+  <text x="34" y="222" class="t">Whoop</text>
+  <text x="34" y="242" class="s">OAuth v2 · Webhook + 轮询</text>
+
+  <text x="300" y="28" class="lb">处理层 · VPS</text>
+  <rect x="300" y="40" width="270" height="218" rx="12" class="hl"/>
+  <text x="318" y="68" class="t">Hermes Agent（常驻）</text>
+  <text x="318" y="92" class="s">· Telegram 网关：收消息、回确认</text>
+  <text x="318" y="112" class="s">· Skill：柳比歇夫分类 / 记账解析</text>
+  <text x="318" y="132" class="s">· Cron：每小时拉 Whoop</text>
+  <text x="318" y="152" class="s">· Cron：每晚 23:30 生成日报</text>
+  <rect x="318" y="170" width="234" height="74" rx="8" class="bx"/>
+  <text x="332" y="194" class="t">Ingest API（小服务）</text>
+  <text x="332" y="214" class="s">接 Omi / Whoop Webhook，验签</text>
+  <text x="332" y="232" class="s">每晚 pg_dump 加密备份</text>
+
+  <text x="660" y="28" class="lb">存储层</text>
+  <rect x="660" y="40" width="220" height="100" rx="12" class="db"/>
+  <text x="678" y="68" class="t">Supabase（唯一真源）</text>
+  <text x="678" y="90" class="s">Postgres + RLS + Auth/MFA</text>
+  <text x="678" y="110" class="s">时间 · 账目 · 身体 · 转写</text>
+  <text x="678" y="128" class="s">pgvector（MemOS 前的替补）</text>
+
+  <rect x="660" y="158" width="220" height="62" rx="12" class="bx"/>
+  <text x="678" y="184" class="t">MemOS</text>
+  <text x="678" y="204" class="s">长期语义记忆，可重建</text>
+
+  <rect x="660" y="236" width="220" height="44" rx="10" class="bx"/>
+  <text x="678" y="263" class="s">加密备份：R2 / 本机 Mac</text>
+
+  <text x="300" y="330" class="lb">展示层</text>
+  <rect x="300" y="342" width="270" height="100" rx="12" class="bx"/>
+  <text x="318" y="370" class="t">lifeos 网站（Next.js）</text>
+  <text x="318" y="392" class="s">Cloudflare Access → 密码</text>
+  <text x="318" y="410" class="s">→ TOTP → Passkey</text>
+  <text x="318" y="428" class="s">可视化面板 + 手机 PWA 快记</text>
+
+  <rect x="660" y="342" width="220" height="100" rx="12" class="bx"/>
+  <text x="678" y="370" class="t">本机 LifeOS</text>
+  <text x="678" y="392" class="s">本地 Hermes</text>
+  <text x="678" y="410" class="s">经 Supabase MCP 读写</text>
+  <text x="678" y="428" class="s">不再自存账本</text>
+
+  <path d="M210 71 H300" class="ln"/>
+  <path d="M210 149 H300" class="ln"/>
+  <path d="M210 227 H300" class="ln"/>
+  <path d="M570 90 H660" class="ln"/>
+  <path d="M570 189 H660" class="ln"/>
+  <path d="M570 240 C610 240 620 258 660 258" class="ln"/>
+  <path d="M770 140 C770 290 600 300 570 380" class="ln"/>
+  <path d="M770 140 V342" class="ln" stroke-dasharray="4 4"/>
+</svg>
+</div>
+
+<h3>技术选型</h3>
+<div class="tbl">
+<table>
+<tr><th>角色</th><th>选择</th><th>为什么</th></tr>
+<tr><td>常驻管家</td><td><b>Hermes Agent</b>（Nous Research 开源）</td><td>和本机 LifeOS 同一套，skill 可直接复用。原生支持 cron 和 Telegram。可以用 systemd 托管，开机自启。</td></tr>
+<tr><td>手机入口</td><td><b>Telegram Bot</b> + 网站 PWA</td><td>Telegram 支持语音消息，在国内外都能稳定推送。PWA 作为备用入口，还能做一键快记按钮。</td></tr>
+<tr><td>数据库</td><td><b>Supabase</b> Free</td><td>Postgres、认证、行级权限（RLS）一站齐全。Auth 原生支持 TOTP MFA。</td></tr>
+<tr><td>长期记忆</td><td><b>MemOS</b>（第二阶段）</td><td>先用 pgvector 跑通。数据量上来、需要跨月回忆时再接 MemOS。</td></tr>
+<tr><td>网站</td><td><b>Next.js</b> + Supabase SSR</td><td>部署在 Vercel 或 Cloudflare Pages，免费，和 VPS 解耦。VPS 宕机时面板仍能看。</td></tr>
+<tr><td>门禁</td><td><b>Cloudflare Access</b>（Zero Trust 免费档）</td><td>在网站之前拦一道。陌生人看不到任何页面，也就没有可攻击的登录框。</td></tr>
+<tr><td>开发工具</td><td>Antigravity / Claude Code（本机）</td><td>用来写上面这些代码，不部署到服务器。</td></tr>
+</table>
+</div>
+
+<!-- ============================================================
+     四、数据管线
+     ============================================================ -->
+<h2>3. 四条数据管线</h2>
+
+<div class="grid">
+<div class="card">
+<span class="tag t-ok">难度低</span><b>A. 时间统计（柳比歇夫）</b>
+<ul>
+<li>你对 Telegram 说："刚写完方案，1 小时 20 分。"</li>
+<li>Hermes 用 skill 解析出：开始时间、结束时间、分类、事项。</li>
+<li>写入 <code>time_entries</code> 表，回一句确认，可以撤销。</li>
+<li>每晚自动检查时间空洞，例如"14:00–16:30 没有记录，你在做什么？"</li>
+</ul>
+</div>
+<div class="card">
+<span class="tag t-ok">难度低</span><b>B. 记账</b>
+<ul>
+<li>"午饭 38，微信付的。"→ 金额、币种、分类、账户、时间。</li>
+<li>写入 <code>transactions</code> 表。金额用整数"分"存储，不用浮点数。</li>
+<li>一句话里同时有时间和金额时，同时生成两条记录，并互相关联。</li>
+<li>以后可以加：截图识别支付通知、导入月度账单做对账。</li>
+</ul>
+</div>
+<div class="card">
+<span class="tag t-warn">难度中</span><b>C. Whoop 身体数据</b>
+<ul>
+<li>在 developer.whoop.com 注册应用，走 OAuth 2.0 授权一次。refresh token 存在 VPS 上。</li>
+<li>恢复、睡眠、训练用 Webhook 实时推送（HMAC 签名，必须验签）。</li>
+<li>每日 Strain、周期、身体测量没有 Webhook，每小时轮询一次。</li>
+<li>用 v2 API。v1 Webhook 已经停用。</li>
+</ul>
+</div>
+<div class="card">
+<span class="tag t-bad">难度高</span><b>D. 24 小时录音 → 文字 → 摘要</b>
+<ul>
+<li>推荐 <b>Omi 挂件</b>：开源，提供实时转写 Webhook，按片段推送到你的 Ingest API。</li>
+<li>Plaud 类录音笔音质好，但没有稳定的公开 API，只能半自动导出。</li>
+<li>只用手机：Android 可以，耗电大；iPhone 后台会被系统杀掉，不可行。</li>
+<li>每晚 Hermes 把当天的转写分段、打标签、生成摘要，写入 <code>daily_digest</code>，再提炼成记忆送进 MemOS。</li>
+<li>摘要还能反向补全时间统计。例如"14:00–15:10 在和某人谈合作"。</li>
+</ul>
+</div>
+</div>
+
+<!-- ============================================================
+     五、数据库
+     ============================================================ -->
+<h2>4. 数据库设计（初稿）</h2>
+<p>原则：<b>原始输入和结构化结果分开存</b>。AI 解析错了，可以从原话重新解析，不会丢信息。</p>
+<pre>
+raw_inputs      -- 每条原话 / 语音转写：source, text, received_at, parsed(bool)
+time_entries    -- 柳比歇夫：start_at, end_at, category_id, activity, raw_input_id
+categories      -- 你定义的分类树（第一类工作 / 第二类 / 休息…），很少变动
+transactions    -- 账目：amount_cents, currency, category, account, occurred_at, raw_input_id
+whoop_recovery  -- recovery_score, hrv, rhr, spo2, skin_temp, sleep_id(uuid)
+whoop_sleep     -- stages, efficiency, performance, respiratory_rate
+whoop_workout   -- strain, sport, hr_zones
+whoop_cycle     -- 每日 strain（轮询获得）
+transcripts     -- 录音片段：start_at, end_at, speaker, text（不存音频）
+daily_digest    -- 每日摘要：date, summary, highlights, mood, auto_time_blocks(jsonb)
+</pre>
+<p>所有表都开启 RLS，只允许你本人的 <code>user_id</code> 读写。VPS 写入用 service_role key，这个 key 只放在 VPS 的环境变量里，绝不进前端。</p>
+
+<!-- ============================================================
+     六、安全
+     ============================================================ -->
+<h2>5. 三重登录安全</h2>
+<p>你的要求是"别人知道网址也登不上去"。下面的设计能做到"别人知道网址也<b>看不到</b>登录框"。</p>
+<div class="tbl">
+<table>
+<tr><th>层</th><th>机制</th><th>防的是什么</th></tr>
+<tr><td>0 · 门禁</td><td>Cloudflare Access：只放行你的邮箱验证码或 GitHub 账号</td><td>扫描器、撞库机器人。他们连页面都看不到。</td></tr>
+<tr><td>1 · 你知道的</td><td>Supabase Auth 密码（长密码，存在密码管理器里）</td><td>只拿到你设备的人</td></tr>
+<tr><td>2 · 你拥有的</td><td>TOTP 动态码（Supabase 原生 MFA，可以用 1Password 或 Google Authenticator）</td><td>密码泄露</td></tr>
+<tr><td>3 · 你本人</td><td>Passkey / WebAuthn（Face ID、指纹）——代替你说的"二级密钥"</td><td>钓鱼网站。Passkey 绑定域名，假网站拿不到。</td></tr>
+</table>
+</div>
+<p>补充措施：会话 7 天过期；新设备登录时 Telegram 推送提醒；准备一组离线恢复码，打印出来放在家里。</p>
+<p><span class="tag t-warn">注意</span>Telegram Bot 本身也是入口。在代码里只允许你的 Telegram user_id 和 bot 对话，其他人发来的消息一律忽略。</p>
+
+<!-- ============================================================
+     七、面板
+     ============================================================ -->
+<h2>6. 可视化面板</h2>
+<div class="grid">
+<div class="card"><b>今日</b><br>时间轴（24 格彩色条，按柳比歇夫分类上色）、今日花费、Whoop 恢复分、管家日报。</div>
+<div class="card"><b>时间</b><br>周 / 月 / 年各类时间总量，第一类工作的趋势，时间空洞热力图。</div>
+<div class="card"><b>金钱</b><br>分类支出、月度对比、单笔大额提醒、"每小时工作值多少钱"。</div>
+<div class="card"><b>身体</b><br>HRV、静息心率、睡眠趋势。和时间、开销做交叉分析，例如"熬夜的第二天花钱更多吗"。</div>
+<div class="card"><b>人生档案</b><br>按日期翻阅录音摘要，全文搜索，向管家提问："上个月我和谁聊过 X？"</div>
+<div class="card"><b>快记</b><br>手机 PWA 首页的大按钮：说一句话 → 直接进 <code>raw_inputs</code>。</div>
+</div>
+
+<!-- ============================================================
+     八、路线图
+     ============================================================ -->
+<h2>7. 分阶段路线图</h2>
+<p>每个阶段结束时都能独立使用，不搞一次性大爆炸上线。</p>
+<div class="card">
+<div class="phase"><div class="n">阶段 1<small>约 1 周</small></div><div><b>管家能记账、记时间。</b>VPS 装 Hermes 并用 systemd 托管 → 建 Supabase 表和 RLS → 写柳比歇夫和记账 skill → 接 Telegram → 每晚备份。<br><i>验收：连续 7 天只用 Telegram 记录，数据不丢、分类正确。</i></div></div>
+<div class="phase"><div class="n">阶段 2<small>约 1 周</small></div><div><b>网站和门禁上线。</b>Next.js 面板（今日、时间、金钱三页）→ Cloudflare Access → 密码 + TOTP + Passkey。<br><i>验收：手机能登录看面板；无痕窗口访问时被 Cloudflare 拦下。</i></div></div>
+<div class="phase"><div class="n">阶段 3<small>3–5 天</small></div><div><b>接入 Whoop。</b>OAuth 授权、Webhook 验签、轮询补齐、身体页面。</div></div>
+<div class="phase"><div class="n">阶段 4<small>1–2 周</small></div><div><b>24 小时录音。</b>购买 Omi → Ingest API 接 Webhook → 每晚生成摘要 → 自动补全时间空洞。</div></div>
+<div class="phase" style="border:0"><div class="n">阶段 5<small>按需</small></div><div><b>长期记忆。</b>先用 pgvector 做检索；VPS 扩容后再部署 MemOS，把每日摘要提炼成长期记忆。本机 LifeOS 改为通过 MCP 读取。</div></div>
+</div>
+
+<!-- ============================================================
+     九、成本
+     ============================================================ -->
+<h2>8. 每月成本（估算）</h2>
+<div class="tbl">
+<table>
+<tr><th>项目</th><th>费用</th><th>备注</th></tr>
+<tr><td>VPS</td><td>已有</td><td>只跑 Hermes：2GB 内存够用；要自建 MemOS：建议 4–8GB</td></tr>
+<tr><td>Supabase / Vercel / Cloudflare</td><td>0</td><td>免费档足够个人使用</td></tr>
+<tr><td>LLM 调用</td><td>约 $5–30</td><td>记账和时间解析很便宜。每天长篇转写的摘要是主要开销，可以用便宜模型做初筛</td></tr>
+<tr><td>Omi 挂件</td><td>一次性约 $90</td><td>转写服务可能另外收费，购买前确认</td></tr>
+<tr><td>Whoop API</td><td>0</td><td>已有会员即可</td></tr>
+</table>
+</div>
+
+<!-- ============================================================
+     十、风险
+     ============================================================ -->
+<h2>9. 风险清单</h2>
+<div class="tbl">
+<table>
+<tr><th>风险</th><th>级别</th><th>对策</th></tr>
+<tr><td>Supabase 免费版无备份，误删或被暂停</td><td><span class="tag t-bad">高</span></td><td>每晚 pg_dump，加密后异地存储；每月演练一次恢复</td></tr>
+<tr><td>service_role key 或 Whoop token 泄露</td><td><span class="tag t-bad">高</span></td><td>只放 VPS 环境变量；VPS 只开 SSH 密钥登录 + 防火墙</td></tr>
+<tr><td>录音涉及他人隐私</td><td><span class="tag t-warn">中</span></td><td>转写后删除音频；不外传；敏感场合关闭</td></tr>
+<tr><td>AI 解析错账</td><td><span class="tag t-warn">中</span></td><td>保留原话；每条记录回执确认；支持一键撤销</td></tr>
+<tr><td>分类表频繁变动，统计失效</td><td><span class="tag t-warn">中</span></td><td>分类只增不改，旧分类做映射</td></tr>
+<tr><td>第三方 API 变更（Whoop / Omi）</td><td><span class="tag t-blue">低</span></td><td>适配器隔离：每个数据源一个模块，坏一个不影响其他</td></tr>
+</table>
+</div>
+
+<!-- ============================================================
+     十一、待决
+     ============================================================ -->
+<h2>10. 需要你拍板的问题</h2>
+<div class="card">
+<ol>
+<li><b>VPS 配置</b>是多少内存？这决定 MemOS 是自建还是先用云服务或 pgvector。</li>
+<li>本机 LifeOS 里的<b>柳比歇夫分类表和记账分类</b>能发给我吗？我直接复用，不另起一套。</li>
+<li>录音设备：<b>买 Omi 挂件</b>，还是先用安卓手机或现有录音笔试行？</li>
+<li>网站域名是 <code>lifeos.zhaozimin.com</code> 吗？部署到 Vercel 还是 Cloudflare Pages？</li>
+<li>Hermes 在 VPS 上用哪个模型？跟本机保持一致，还是换便宜的模型专门做解析？</li>
+</ol>
+<p>确认以后，我从<b>阶段 1</b>开始。项目会同时建立 GEB 文档骨架（L1 / L2 / L3）。</p>
+</div>
+
+<h2>参考来源</h2>
+<ul style="font-size:14px">
+<li><a href="https://discuss.ai.google.dev/t/accessing-the-antigravity-desktop-app-from-mobile-and-running-antigravity-on-a-server/178876">Google AI 论坛：在服务器上运行 Antigravity 的讨论</a></li>
+<li><a href="https://blog.ishosting.com/en/hermes-on-vps">在 VPS 上部署 Hermes Agent</a> · <a href="https://horadecodar.com.br/?p=40586">Hermes Agent 24/7 运行指南</a></li>
+<li><a href="https://developer.whoop.com/docs/developing/oauth">WHOOP OAuth</a> · <a href="https://developer.whoop.com/docs/developing/webhooks/">WHOOP Webhooks</a> · <a href="https://developer.whoop.com/docs/developing/v1-v2-migration">v1→v2 迁移</a></li>
+<li><a href="https://docs.omi.me/doc/developer/apps/Integrations">Omi 实时转写 Webhook 文档</a></li>
+<li><a href="https://github.com/MemTensor/MemOS">MemTensor/MemOS</a></li>
+<li><a href="https://automationatlas.io/answers/supabase-free-tier-limits-2026/">Supabase 免费版限制（2026）</a> · <a href="https://supabase.com/pricing">Supabase 官方定价</a></li>
+</ul>
+
+</div>
+</body>
+</html>

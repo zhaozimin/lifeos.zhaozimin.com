@@ -1,0 +1,92 @@
+<!doctype html>
+<!--
+ [INPUT]: 依赖本机 styles.css；内容对应当前服务器的数据流。
+ [OUTPUT]: 提供 WHOOP 授权页面引用的数据使用与保存说明。
+ [POS]: public 的静态隐私说明；仅供本机单用户部署使用。
+ [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LifeOS WHOOP · 隐私与数据使用说明</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main
+      style="
+        max-width: 840px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        line-height: 1.9;
+      "
+    >
+      <p class="eyebrow">LIFEOS WHOOP · PERSONAL LOCAL DEPLOYMENT</p>
+      <h1 style="margin: 12px 0 16px">隐私与数据使用说明</h1>
+      <p class="muted">适用版本：0.4.0 · 更新日期：2026 年 10 月 22 日</p>
+      <section class="panel" style="margin-top: 24px">
+        <h2>用途与适用范围</h2>
+        <p style="margin-top: 12px">
+          LifeOS WHOOP 是由使用者本人运行的本机单用户控制台。它读取本人授权的
+          WHOOP
+          记录，展示睡眠、恢复、身体负荷和训练趋势。本说明适用于当前本机版本，不适用于向他人提供的公开服务。
+        </p>
+      </section>
+      <section class="panel" style="margin-top: 18px">
+        <h2>读取与保存的数据</h2>
+        <p style="margin-top: 12px">
+          授权范围包括基础账号资料、身体测量、生理周期、恢复、睡眠和运动记录。应用还保存本人填写的精力、酸痛、体重、饮食、身体感受、健康目标、可选年龄、作息、忌口与报告日程。
+          每日建议及生成时的依据保存在本机；手动更新保留旧修订。报告默认上海时间 07:00 发布当天训练，06:00 开始预览。发布前先同步；当天评分未到或同步失败时显示等待状态，五分钟重试。电脑唤醒后只补当天安排。
+        </p>
+        <p style="margin-top: 12px">
+          WHOOP
+          应用凭据、访问令牌和刷新令牌用于完成授权和同步。刷新令牌使本机服务在访问令牌到期后继续读取已经授权的数据。
+        </p>
+      </section>
+      <section class="panel" style="margin-top: 18px">
+        <h2>本机保存与网络连接</h2>
+        <p style="margin-top: 12px">
+          健康记录和凭据保存在配置指定的本机目录内的 SQLite 数据库中。默认目录为
+          .data；启用后台服务后，目录为用户 Library/Application
+          Support/LifeOS-WHOOP/data。目录权限为 0700，数据库文件权限为
+          0600。文件未额外加密，保护依赖本机账户、磁盘与备份安全。
+        </p>
+        <p style="margin-top: 12px">
+          当前服务只监听本机回环地址。授权和同步会连接 WHOOP
+          官方服务。当前版本不接入 AI
+          模型服务，不安装广告或访问分析脚本，不自动将健康数据发送给其他第三方。WHOOP
+          自身的数据使用由其隐私说明约束。
+        </p>
+      </section>
+      <section class="panel" style="margin-top: 18px">
+        <h2>导出、停止授权与删除</h2>
+        <p style="margin-top: 12px">
+          本人可以导出健康记录，也可以导出不含账号标识、令牌和自由文字的健康摘要。摘要仍包含个人健康指标；是否向外部服务提供，由本人决定。
+        </p>
+        <p style="margin-top: 12px">
+          在「接入设置」断开连接会向 WHOOP
+          撤销授权，并移除本机令牌。已经同步的历史记录仍保留。本人也可在 WHOOP
+          中撤销此应用授权。
+        </p>
+        <p style="margin-top: 12px">
+          记录会保留至本人主动删除。需要删除全部本机记录与凭据时，请先保存需要的导出文件，停止应用，再手动删除数据目录内的
+          lifeos.sqlite 文件及其存在的 SQLite
+          附属文件。删除后，本应用不能恢复这些内容。请自行核对其他导出文件和备份。
+        </p>
+      </section>
+      <section class="panel" style="margin-top: 18px">
+        <h2>建议与版本变更</h2>
+        <p style="margin-top: 12px">
+          当前建议由本机规则生成，包含条件性的作息、饮食和运动安排。用于日常趋势参考，本次同步成功且当天睡眠与恢复评分完成后才发布训练，不提供疾病诊断或医疗监护。后续启用外部
+          AI、远程访问或多人使用前，应重新说明数据流并取得相应授权。
+        </p>
+        <p style="margin-top: 12px">
+          此部署由使用者本人控制。数据路径、导出与授权操作见项目
+          README；修改数据使用方式时，应同时更新本页。
+        </p>
+      </section>
+      <p style="margin-top: 24px"><a href="/#settings">返回接入设置</a></p>
+    </main>
+  </body>
+</html>

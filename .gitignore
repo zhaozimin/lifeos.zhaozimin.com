@@ -1,0 +1,55 @@
+# [INPUT]: 本地开发与 VPS 登录产生的凭据及缓存。
+# [OUTPUT]: Git 忽略规则，保留示例配置。
+# [POS]: 根目录提交边界，避免运行状态进入源码。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+.DS_Store
+.impeccable/
+.env
+.env.*
+!.env.example
+!.env.*.example
+.gemini/
+.antigravity/
+*.pem
+*.key
+node_modules/
+.next/
+dist/
+coverage/
+*.log
+__pycache__/
+*.pyc
+/supabase/.temp/
+/supabase/.branches/
+.private/
+*.dump
+*.enc
+
+.dev.vars*
+!.dev.vars.example
+.wrangler/
+*.zip
+
+/apps/subscriptions/server/runtime/
+/apps/subscriptions/server/web/
+/apps/subscriptions/cloud-web/
+
+# 生产部署参数及个人数据只在本机私有目录保留。
+/apps/subscriptions/edge/wrangler.toml
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.db
+*.db-wal
+*.db-shm
+*.age
+*.tar
+*.tar.gz
+*.bundle
+*.p12
+*.pfx
+/backups/
+/exports/

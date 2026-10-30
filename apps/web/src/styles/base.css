@@ -1,0 +1,126 @@
+/* [INPUT]: 依赖 design/zzm/zzm.css 的 --zzm-* 令牌；控件外观由 .zzm-btn 与 .field 提供。
+ * [OUTPUT]: cloud-legacy 内共享的排版、卡片、标签、空状态与错误条。
+ * [POS]: 附加页（历史记录、收件箱、登录）的公共底座；本文件不写按钮与输入框外观。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md */
+.cloud-legacy {
+  font-family: var(--zzm-font);
+  color: var(--zzm-ink);
+
+  h1,
+  h2,
+  p {
+    margin: 0;
+  }
+  h2 {
+    font-size: 16px;
+    font-weight: 650;
+    line-height: 24px;
+  }
+  strong {
+    font-weight: 600;
+  }
+  a {
+    color: inherit;
+  }
+
+  .muted {
+    color: var(--zzm-muted);
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .eyebrow {
+    font-family: var(--zzm-mono);
+    font-size: 10.5px;
+    line-height: 16px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--zzm-muted);
+  }
+
+  /* 卡片语法：白卡 + .09 细线 + 16 圆角 + 浮起光影 */
+  .card {
+    min-width: 0;
+    margin-bottom: 24px;
+    padding: 24px;
+    background: var(--zzm-surface);
+    border: 1px solid var(--zzm-hairline-2);
+    border-radius: 16px;
+    box-shadow: var(--zzm-card-shadow);
+  }
+  .card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  /* 标签不可点，所以是胶囊 */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--zzm-chip);
+    color: var(--zzm-muted);
+    font-size: 11px;
+    line-height: 20px;
+    white-space: nowrap;
+  }
+
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 208px;
+    padding: 24px;
+    color: var(--zzm-muted);
+    text-align: center;
+  }
+  .empty > svg {
+    color: var(--zzm-faint);
+  }
+  .empty strong {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--zzm-ink);
+  }
+  .empty p {
+    max-width: 344px;
+    font-size: 12px;
+    line-height: 20px;
+  }
+
+  .entry-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .entry-main > strong {
+    font-size: 13.5px;
+    line-height: 20px;
+  }
+  .entry-main > span,
+  .entry-main > small {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--zzm-muted);
+  }
+
+  /* 错误：朱字说明发生了什么，旁边给出能做的动作 */
+  .error {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    color: var(--zzm-accent-ink);
+    font-size: 13px;
+    line-height: 20px;
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "lifeos-workspace",
+  "private": true,
+  "scripts": {
+    "ui": "node ops/ui-preview.mjs",
+    "ui:subscriptions": "npm --prefix apps/subscriptions/web run build",
+    "ui:check": "npm --prefix apps/web run check"
+  }
+}

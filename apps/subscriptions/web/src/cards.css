@@ -1,0 +1,795 @@
+/**
+ * [INPUT]: 依赖 index.css 的纸·墨·朱令牌、Cards.tsx 的卡包结构与 BankCardVisual.tsx 的公开/AI 卡面语义
+ * [OUTPUT]: 对外提供点卡即编辑的 Apple Wallet 式层叠卡包、标准银行卡比例、公开原卡图无覆盖、AI 底图本地信息层、BIN 识别与卡面候选选择
+ * [POS]: web/src 的银行卡主视觉边界。公开原卡图完整展示；AI 图只承担背景，准确字段在本地覆盖；照片生成控件交给 card-photo.css
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+.cards-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.cards-head-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.cards-ledger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.cards-ledger span {
+  width: 1px;
+  height: 12px;
+  background: var(--hairline-strong);
+}
+
+.cards-filters {
+  display: flex;
+  gap: 22px;
+  margin-top: 24px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--hairline);
+  scrollbar-width: none;
+}
+
+.cards-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.cards-filter {
+  position: relative;
+  flex: none;
+  padding: 0 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-ui);
+  cursor: pointer;
+}
+
+.cards-filter span {
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+}
+
+.cards-filter::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  content: "";
+  background: transparent;
+}
+
+.cards-filter.is-current {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.cards-filter.is-current::after {
+  background: var(--zhu);
+}
+
+.wallet-layout {
+  width: min(100%, 680px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.wallet-stage {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--hairline);
+  border-radius: calc(var(--radius-xl) + 8px);
+  background:
+    radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--surface) 96%, transparent), transparent 48%),
+    color-mix(in srgb, var(--rail) 54%, var(--paper));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--surface) 92%, transparent),
+    var(--shadow-lift);
+}
+
+.wallet-stage-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.wallet-stage-head h2 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--fs-display-sm);
+  font-weight: var(--display-font-weight);
+  letter-spacing: var(--display-letter-spacing);
+}
+
+.wallet-kicker {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-kicker);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.wallet-count {
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.wallet-deck {
+  position: relative;
+  width: min(100%, 470px);
+  height: 0;
+  margin: 24px auto 0;
+}
+
+.wallet-deck-item {
+  position: absolute;
+  right: 0;
+  left: 0;
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wallet-deck-item:not(.is-front):hover,
+.wallet-deck-item:not(.is-front):focus-within {
+  transform: translateY(-7px);
+}
+
+.wallet-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.586;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--surface) 24%, var(--hairline-strong));
+  border-radius: calc(var(--radius-xl) + 5px);
+  background: linear-gradient(145deg, var(--ink-strong), color-mix(in srgb, var(--ink) 74%, var(--ico-steel)));
+  box-shadow:
+    0 1px 1px color-mix(in srgb, var(--ink) 16%, transparent),
+    0 14px 34px color-mix(in srgb, var(--ink) 17%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface) 20%, transparent);
+  color: var(--surface);
+  font: inherit;
+  text-align: left;
+  transform: translateZ(0);
+  transition:
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 180ms ease;
+}
+
+button.wallet-card {
+  cursor: pointer;
+}
+
+.wallet-card:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--zhu) 46%, transparent);
+  outline-offset: 3px;
+}
+
+.wallet-card.is-selected {
+  box-shadow:
+    0 2px 3px color-mix(in srgb, var(--ink) 14%, transparent),
+    0 22px 48px color-mix(in srgb, var(--ink) 21%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface) 24%, transparent);
+}
+
+.wallet-card.is-network-unionpay {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--ink) 67%, var(--ico-teal)), var(--ink));
+}
+
+.wallet-card.is-network-visa,
+.wallet-card.is-network-amex {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--ink) 58%, var(--ico-steel)), var(--ink-strong));
+}
+
+.wallet-card.is-network-mastercard,
+.wallet-card.is-network-discover {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--ink) 66%, var(--zhu)), var(--ink));
+}
+
+.wallet-card.is-network-jcb {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--ink) 64%, var(--zzm-text-4)), var(--ink));
+}
+
+.wallet-card.is-network-other {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--ink) 80%, var(--muted)), var(--ink));
+}
+
+.wallet-card-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--surface) 18%, transparent), transparent 23%),
+    linear-gradient(118deg, color-mix(in srgb, var(--surface) 12%, transparent), transparent 34% 68%, color-mix(in srgb, var(--surface) 7%, transparent));
+  pointer-events: none;
+}
+
+.wallet-card-sheen::after {
+  position: absolute;
+  right: -9%;
+  bottom: -38%;
+  width: 54%;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--surface) 14%, transparent);
+  border-radius: 50%;
+  content: "";
+  box-shadow:
+    0 0 0 22px color-mix(in srgb, var(--surface) 5%, transparent),
+    0 0 0 46px color-mix(in srgb, var(--surface) 3%, transparent);
+}
+
+.wallet-card.is-virtual-card .wallet-card-sheen {
+  background-image:
+    linear-gradient(118deg, color-mix(in srgb, var(--surface) 11%, transparent), transparent 40%),
+    repeating-linear-gradient(90deg, transparent 0 18px, color-mix(in srgb, var(--surface) 5%, transparent) 18px 19px);
+}
+
+.wallet-card-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--surface);
+}
+
+.wallet-card.has-cover .wallet-card-sheen,
+.wallet-card.has-cover .wallet-card-content {
+  display: none;
+}
+
+.wallet-card.has-cover.is-ai-cover .wallet-card-sheen {
+  display: block;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 34%, transparent), transparent 38% 58%, color-mix(in srgb, var(--ink) 48%, transparent));
+}
+
+.wallet-card.has-cover.is-ai-cover .wallet-card-sheen::after {
+  display: none;
+}
+
+.wallet-card.has-cover.is-ai-cover .wallet-card-content {
+  display: flex;
+}
+
+.wallet-card.is-ai-cover .wallet-card-cover {
+  object-fit: cover;
+}
+
+.wallet-card-content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 22px 23px 20px;
+}
+
+.wallet-card-topline,
+.wallet-card-title,
+.wallet-card-number,
+.wallet-card-footline {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wallet-card-issuer {
+  overflow: hidden;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 38%, transparent);
+  white-space: nowrap;
+}
+
+.card-status {
+  flex: none;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--surface) 32%, transparent);
+  border-radius: var(--radius-sm);
+  /* 卡面上的角标自带深色小底，不模糊；卡面不随主题变，用字面值 */
+  background: rgba(0, 0, 0, .55);
+  color: #FFFFFF;
+  font-size: var(--fs-kicker);
+  font-weight: 600;
+}
+
+.wallet-card-title {
+  align-items: flex-end;
+  margin-top: 14%;
+}
+
+.wallet-card-title > span {
+  overflow: hidden;
+  font-family: var(--font-serif);
+  font-size: clamp(var(--fs-section), 3.8vw, var(--fs-display-sm));
+  font-weight: var(--display-font-weight);
+  letter-spacing: var(--display-letter-spacing);
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 4px color-mix(in srgb, var(--ink) 38%, transparent);
+  white-space: nowrap;
+}
+
+.wallet-card-title small {
+  flex: none;
+  color: color-mix(in srgb, var(--surface) 76%, transparent);
+  font-size: var(--fs-kicker);
+}
+
+.wallet-card-chip {
+  position: absolute;
+  top: 43%;
+  left: 23px;
+  width: 42px;
+  height: 31px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, #6f5a24 52%, transparent);
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, transparent 47%, color-mix(in srgb, #765f24 38%, transparent) 48% 52%, transparent 53%),
+    linear-gradient(180deg, transparent 47%, color-mix(in srgb, #765f24 34%, transparent) 48% 52%, transparent 53%),
+    linear-gradient(145deg, #f4e2a2, #bfa15c);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 34%, transparent);
+}
+
+.wallet-card-chip i {
+  position: absolute;
+  inset: 7px 9px;
+  border: 1px solid color-mix(in srgb, #715719 36%, transparent);
+  border-radius: 3px;
+}
+
+.wallet-card-number {
+  justify-content: flex-start;
+  gap: 14px;
+  margin-top: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-section);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 40%, transparent);
+}
+
+.wallet-card-number > span:not(.veil) {
+  color: color-mix(in srgb, var(--surface) 54%, transparent);
+}
+
+.wallet-card-footline {
+  margin-top: 16px;
+  font-size: var(--fs-caption);
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--ink) 44%, transparent);
+}
+
+.wallet-card-footline > span {
+  color: color-mix(in srgb, var(--surface) 74%, transparent);
+}
+
+.wallet-card-footline strong {
+  font-size: var(--fs-body);
+  letter-spacing: -0.02em;
+}
+
+.wallet-card.is-frozen {
+  filter: saturate(0.36);
+}
+
+.wallet-card.is-closed {
+  filter: grayscale(0.88);
+  opacity: 0.84;
+}
+
+.wallet-card.is-preview {
+  pointer-events: none;
+}
+
+.wallet-stage-hint {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  text-align: center;
+}
+
+.wallet-empty-preview {
+  width: min(100%, 470px);
+  margin: 24px auto 0;
+}
+
+.wallet-empty-preview .wallet-card {
+  opacity: 0.66;
+  filter: saturate(0.32);
+}
+
+.wallet-empty-preview > p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-ui);
+  text-align: center;
+}
+
+.wallet-create-button {
+  display: block;
+  margin: 16px auto 0;
+}
+
+.card-editor-form {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.card-editor-body {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  gap: 16px;
+  padding: 8px 20px 20px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.card-editor-live-preview {
+  padding: 12px;
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--rail) 62%, var(--paper));
+}
+
+.card-editor-live-preview .wallet-card {
+  border-radius: var(--radius-xl);
+}
+
+.card-editor-live-preview .wallet-card-content {
+  padding: 17px 18px 15px;
+}
+
+.card-editor-live-preview .wallet-card-title {
+  margin-top: 11%;
+}
+
+.card-editor-live-preview .wallet-card-title > span {
+  font-size: var(--fs-section);
+}
+
+.card-editor-live-preview .wallet-card-number {
+  gap: 9px;
+  font-size: var(--fs-body);
+}
+
+.card-editor-live-preview .wallet-card-footline {
+  margin-top: 10px;
+}
+
+.card-identify-panel,
+.card-cover-editor {
+  padding: 14px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--paper) 74%, var(--surface));
+}
+
+.card-identify-head,
+.card-cover-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.card-identify-panel h3,
+.card-identify-panel p,
+.card-cover-editor h3,
+.card-cover-editor p {
+  margin: 0;
+}
+
+.card-identify-panel h3,
+.card-cover-editor h3 {
+  font-size: var(--fs-ui);
+  font-weight: 600;
+}
+
+.card-identify-head p,
+.card-cover-editor-head p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+}
+
+.card-identify-head > span {
+  flex: none;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--zzm-text-4) 28%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--zzm-text-4);
+  font-size: var(--fs-kicker);
+}
+
+.card-identify-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.card-identify-panel > .caption {
+  margin-top: 9px;
+  line-height: 1.55;
+}
+
+.card-recognize-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-recognize-row p {
+  margin: 0;
+}
+
+.caption.is-quiet {
+  opacity: 0.72;
+}
+
+.text-action {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ico-steel);
+  font-size: var(--fs-ui);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.text-action:hover {
+  color: var(--ink);
+}
+
+.card-cover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.card-cover-search-note {
+  margin-top: 10px !important;
+  line-height: 1.55;
+}
+
+.card-cover-candidates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.card-cover-candidate {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.card-cover-candidate:hover,
+.card-cover-candidate:focus-visible {
+  border-color: color-mix(in srgb, var(--ico-steel) 62%, var(--hairline-strong));
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-2px);
+}
+
+.card-cover-candidate:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--zhu) 40%, transparent);
+  outline-offset: 2px;
+}
+
+.card-cover-candidate:disabled {
+  cursor: wait;
+  opacity: 0.66;
+}
+
+.card-cover-candidate-image {
+  position: relative;
+  display: block;
+  aspect-ratio: 1.586;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--rail) 62%, var(--surface));
+}
+
+.card-cover-candidate-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.card-cover-candidate-image strong,
+.card-cover-candidate-image em {
+  position: absolute;
+  top: 7px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, .72);
+  color: #FFFFFF;
+  font-size: var(--fs-kicker);
+  font-style: normal;
+}
+
+.card-cover-candidate-image strong {
+  left: 7px;
+}
+
+.card-cover-candidate-image em {
+  right: 7px;
+}
+
+.card-cover-candidate-meta {
+  display: block;
+  padding: 8px 9px 9px;
+}
+
+.card-cover-candidate-meta b,
+.card-cover-candidate-meta small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-cover-candidate-meta b {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+}
+
+.card-cover-candidate-meta small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--fs-kicker);
+}
+
+.card-cover-advanced {
+  color: var(--muted);
+  font-size: var(--fs-caption);
+}
+
+.card-cover-advanced summary {
+  cursor: pointer;
+}
+
+.card-cover-preview {
+  overflow: hidden;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.card-cover-preview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.586;
+  object-fit: contain;
+  background: var(--surface);
+}
+
+.card-cover-preview > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--hairline);
+}
+
+.card-cover-preview p {
+  color: var(--muted);
+  font-size: var(--fs-caption);
+}
+
+.card-editor-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .cards-page-head {
+    flex-direction: column;
+  }
+
+  .cards-head-actions {
+    width: 100%;
+  }
+
+  .cards-head-actions .btn {
+    flex: 1;
+  }
+
+  .cards-ledger {
+    flex-wrap: wrap;
+  }
+
+  .wallet-stage {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 440px) {
+  .cards-head-actions,
+  .card-editor-pair,
+  .card-identify-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cards-head-actions {
+    display: grid;
+  }
+
+  .wallet-card-content {
+    padding: 16px;
+  }
+
+  .wallet-card-title {
+    margin-top: 10%;
+  }
+
+  .wallet-card-number {
+    gap: 8px;
+    font-size: var(--fs-body);
+  }
+
+  .wallet-card-footline {
+    margin-top: 10px;
+  }
+
+  .card-cover-candidates {
+    grid-template-columns: 1fr;
+  }
+
+  .card-recognize-row,
+  .card-identify-head,
+  .card-cover-editor-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-card,
+  .wallet-deck-item {
+    transition: none;
+  }
+}

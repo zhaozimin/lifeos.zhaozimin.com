@@ -1,0 +1,84 @@
+/**
+ * [INPUT]: 依赖 design/zzm/zzm.css 的 --zzm-* 令牌（由 main.tsx 先行导入）。
+ * [OUTPUT]: SubOS 语义令牌：纸面、墨、朱、到期、余额、边标、字体、字号、圆角与落影。
+ * [POS]: 订阅界面的视觉真源。产品 CSS 只读这里的 var(--*)；色值全部指向纸墨朱令牌，
+ *        亮暗由宿主写入的 data-theme 切换。设计系统唯一源头在 ui.zhaozimin.com，本地不提供令牌编辑。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+:root {
+  /* ── 纸面与墨 ── */
+  --paper: var(--zzm-paper);
+  --rail: var(--zzm-wash-4);
+  --surface: var(--zzm-surface);
+  --ink: var(--zzm-ink);
+  --ink-strong: var(--zzm-ink-strong);
+  --text-2: var(--zzm-text-2);
+  --muted: var(--zzm-muted);
+  --faint: var(--zzm-faint);
+  --hairline: var(--zzm-hairline);
+  --hairline-strong: var(--zzm-hairline-strong);
+
+  /* ── 朱：一屏一次，只标「下一步」与紧急到期 ── */
+  --zhu: var(--zzm-accent);
+  --zhu-ink: #FFFFFF;
+  --zhu-deep: rgba(122, 42, 29, .9);
+  --zhu-text: var(--zzm-accent-ink); /* 朱字：深色下自动提亮 */
+
+  /* ── 到期圆环：从容常绿（与健康页 --good 同值）；不足 7 天黄；不足 3 天朱字 ── */
+  --due-ok: #6E8C74;
+  --due-mid: #96691F;
+  --due-late: var(--zzm-accent-ink);
+  --balance-gold: #A68A5B;
+
+  /* ── 边标：哑光数据色，与面板 DATA_SERIES 同族 ── */
+  --ico-plum: #8B7393;
+  --ico-steel: #5F7391;
+  --ico-teal: #4F8682;
+  --ico-slate: #556066;
+
+  /* ── 字体：系统字体栈，无衬线；金额与正文同族 ── */
+  --font-sans: var(--zzm-font);
+  --font-serif: var(--zzm-font);
+  --font-mono: var(--zzm-mono);
+  --display-letter-spacing: 0;
+  --display-font-weight: 700;
+
+  /* ── 字号：设计系统 0.5 步进字阶 ── */
+  --fs-kicker: 11px;
+  --fs-caption: 12px;
+  --fs-ui: 13px;
+  --fs-body: 14px;
+  --fs-section: 16px;
+  --fs-page: 22px;
+  --fs-display-sm: 22px;
+  --fs-display: 26px;
+
+  /* ── 圆角梯：4 微件 / 8 控件 / 12 内嵌卡 / 16 卡片 ── */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ── 落影：只取纸墨朱质感令牌，不自造光源 ── */
+  --shadow-btn: var(--zzm-key-shadow);
+  --shadow-chip: var(--zzm-rest-shadow);
+  --shadow-lift: var(--zzm-rest-shadow);
+  --shadow-card: var(--zzm-card-shadow);
+  --shadow-icon: var(--zzm-rest-shadow);
+  --shadow-hover: var(--zzm-lift-shadow);
+  --shadow-tip: var(--zzm-float-shadow);
+  --shadow-zhu: var(--zzm-key-shadow);
+  --shadow-dialog: var(--zzm-float-shadow);
+  --shadow-sheet: var(--zzm-float-shadow);
+}
+
+[data-theme="dark"] {
+  --due-ok: #94B39A;
+  --due-mid: #D9A94F;
+  --balance-gold: #C8AD7F;
+  --ico-plum: #B39BBA;
+  --ico-steel: #8FA2C0;
+  --ico-teal: #7DB1AC;
+  --ico-slate: #8E9AA1;
+}

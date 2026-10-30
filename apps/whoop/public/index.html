@@ -1,0 +1,31 @@
+<!doctype html>
+<!--
+ [INPUT]: 依赖同源 styles.css 与 app.js。
+ [OUTPUT]: 提供控制台根节点、提示区域与原生对话框。
+ [POS]: public 的唯一 HTML 入口；动态内容由 app.js 构建。
+ [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f7f3" />
+    <meta
+      name="description"
+      content="LifeOS，本机 WHOOP 身体趋势与恢复控制台。"
+    />
+    <title>LifeOS · 身体与恢复</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳转到主要内容</a>
+    <div id="app">
+      <div class="initial-loading">LifeOS <span>正在读取本机数据…</span></div>
+    </div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <dialog id="journal-dialog" aria-labelledby="journal-title"></dialog>
+    <noscript>控制台需要 JavaScript。请在浏览器中启用后刷新。</noscript>
+  </body>
+</html>

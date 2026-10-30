@@ -1,0 +1,13 @@
+/**
+ * [INPUT]: 依赖基础、展示、表单、趋势、报告、解读与断点样式。
+ * [OUTPUT]: 按基础、展示、表单、专题、断点顺序加载样式。
+ * [POS]: public 的唯一样式入口；仅请求本机资源。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+@import url("/base.css");
+@import url("/dashboard.css");
+@import url("/forms.css");
+@import url("/insights.css");
+@import url("/plans.css");
+@import url("/chart-help.css");
+@import url("/responsive.css");

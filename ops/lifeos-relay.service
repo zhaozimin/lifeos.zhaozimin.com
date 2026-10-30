@@ -1,0 +1,43 @@
+# [INPUT]: 私有relay.env、可选memos.env与已构建的relay。
+# [OUTPUT]: 开机自启、单实例和失败重启的传话筒。
+# [POS]: VPS 服务边界；只出站，不改 SSH 或 x-ui。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS WeChat relay
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=lifeos
+Group=lifeos
+WorkingDirectory=/opt/lifeos/apps/relay
+EnvironmentFile=/etc/lifeos/relay.env
+EnvironmentFile=-/etc/lifeos/memos.env
+Environment=HOME=/home/lifeos
+Environment=PATH=/home/lifeos/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=LANG=C.UTF-8
+Environment=TZ=Asia/Shanghai
+ExecStartPre=/home/lifeos/.local/bin/node dist/src/main.js --check
+ExecStart=/usr/bin/flock -n /var/lib/lifeos/relay.lock /home/lifeos/.local/bin/node dist/src/main.js
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=85
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/lifeos /home/lifeos/.gemini /home/lifeos/.cache /home/lifeos/.local
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

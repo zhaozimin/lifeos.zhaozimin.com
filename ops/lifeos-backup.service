@@ -1,0 +1,35 @@
+# [INPUT]: 独立只读连接、公钥与私有备份配置。
+# [OUTPUT]: 加密归档和确认上传的 R2 对象。
+# [POS]: 定时备份执行边界；与 relay 用户及 CLI 凭据隔离。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS encrypted database backup
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=2h
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+User=lifeos-backup
+Group=lifeos-backup
+EnvironmentFile=/etc/lifeos-backup/backup.env
+Environment=HOME=/var/lib/lifeos-backup
+Environment=AWS_DEFAULT_REGION=auto
+Environment=AWS_EC2_METADATA_DISABLED=true
+Environment=PGCONNECT_TIMEOUT=15
+Environment=PGSSLMODE=require
+Environment=PGPASSFILE=/etc/lifeos-backup/pgpass
+ExecStart=/usr/bin/flock -n /var/lib/lifeos-backup/backup.lock /usr/bin/python3 /usr/local/lib/lifeos-backup/backup.py
+TimeoutStartSec=10min
+Restart=on-failure
+RestartSec=10min
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/lifeos-backup
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=journal
+StandardError=journal

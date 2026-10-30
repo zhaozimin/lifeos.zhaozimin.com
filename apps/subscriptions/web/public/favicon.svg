@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7.15" fill="#A6402F"/>
+  <circle cx="16" cy="16" r="9" fill="none" stroke="#C97A6E" stroke-width="2.6"/>
+  <circle
+    cx="16"
+    cy="16"
+    r="9"
+    fill="none"
+    stroke="#F6F6F4"
+    stroke-width="2.6"
+    stroke-linecap="round"
+    stroke-dasharray="40 17"
+    transform="rotate(-90 16 16)"
+  />
+</svg>

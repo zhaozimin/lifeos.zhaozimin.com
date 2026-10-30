@@ -1,0 +1,375 @@
+/**
+ * [INPUT]: 依赖 styles.css 的加载顺序与页面语义类名。
+ * [OUTPUT]: 提供窄屏布局和减少动画的适配规则。
+ * [POS]: public 的最后加载的布局覆盖；保持桌面组件结构。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+@media (min-width: 1600px) {
+  .main {
+    padding: 32px 48px;
+  }
+  .metric {
+    min-height: 172px;
+  }
+  .trend-chart {
+    min-height: 245px;
+  }
+}
+@media (max-width: 1250px) {
+  .shell {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+  .sidebar {
+    width: 190px;
+    padding: 28px 14px;
+  }
+  .main {
+    padding: 24px;
+  }
+  .content-grid {
+    grid-template-columns: minmax(0, 1.6fr) minmax(265px, 1fr);
+  }
+  .metric {
+    padding: 16px;
+  }
+  .metric-value {
+    font-size: 31px;
+  }
+  .sparkline {
+    width: 60px;
+    right: 10px;
+    bottom: 44px;
+  }
+  .metric-foot {
+    font-size: 9px;
+  }
+  .readiness-main {
+    gap: 9px;
+  }
+  .recovery-ring {
+    width: 85px;
+    height: 85px;
+  }
+  .panel {
+    padding: 19px;
+  }
+  .metrics {
+    gap: 12px;
+  }
+  .advice-grid {
+    gap: 12px;
+  }
+  .top-date {
+    display: none;
+  }
+}
+@media (max-width: 1050px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+  .readiness-main {
+    margin: 15px 0;
+    gap: 20px;
+  }
+  .readiness-main h3 {
+    max-width: none;
+  }
+  .readiness {
+    display: block;
+  }
+  .content-grid > .readiness .guidance-summary {
+    font-size: 12px;
+  }
+  .advice-grid {
+    grid-template-columns: 1fr;
+  }
+  .advice-card {
+    display: block;
+  }
+  .bottom-grid {
+    gap: 16px;
+  }
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .metric {
+    min-height: 151px;
+  }
+  .sparkline {
+    width: 92px;
+  }
+  .onboarding-steps {
+    display: none;
+  }
+  .page-heading {
+    align-items: flex-start;
+  }
+  .heading-actions {
+    max-width: 220px;
+    justify-content: flex-end;
+  }
+  .footer-links {
+    white-space: normal;
+  }
+  .readiness-main .recovery-ring {
+    width: 100px;
+    height: 100px;
+  }
+}
+@media (max-width: 760px) {
+  .shell {
+    display: block;
+  }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    padding: 11px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    display: block;
+    background: var(--surface);
+  }
+  .brand {
+    padding: 0;
+    gap: 7px;
+  }
+  .brand img {
+    width: 25px;
+    height: 25px;
+  }
+  .brand-name {
+    font-size: 21px;
+  }
+  .brand-tag,
+  .nav-caption,
+  .nav-divider,
+  .sidebar-bottom {
+    display: none;
+  }
+  .nav {
+    display: flex;
+    gap: 2px;
+    margin-top: 12px;
+    overflow: auto;
+  }
+  .nav button {
+    padding: 8px 6px;
+    gap: 4px;
+    font-size: 11px;
+    flex-direction: column;
+    white-space: nowrap;
+    flex: 1;
+    justify-content: center;
+  }
+  .nav button .icon {
+    width: 14px;
+    height: 14px;
+  }
+  .main {
+    padding: 18px 16px 25px;
+  }
+  .topbar {
+    padding-bottom: 17px;
+  }
+  .topbar-right {
+    gap: 8px;
+  }
+  .breadcrumbs {
+    font-size: 10px;
+  }
+  .profile-dot {
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+  }
+  .page-heading {
+    margin: 22px 0 18px;
+    display: block;
+  }
+  .page-heading .eyebrow {
+    font-size: 9px;
+  }
+  h1 {
+    font-size: 25px;
+  }
+  .subtitle {
+    font-size: 11px;
+  }
+  .heading-actions {
+    max-width: none;
+    justify-content: flex-start;
+    margin-top: 17px;
+  }
+  .btn {
+    padding: 9px 12px;
+    font-size: 11px;
+  }
+  .metrics {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .metric {
+    padding: 15px;
+    min-height: 147px;
+    border-radius: 12px;
+  }
+  .metric-value {
+    font-size: 29px;
+  }
+  .metric-head {
+    font-size: 11px;
+  }
+  .metric-icon {
+    width: 24px;
+    height: 24px;
+  }
+  .metric-icon .icon {
+    width: 13px;
+  }
+  .sparkline {
+    width: 53px;
+    bottom: 43px;
+    right: 12px;
+    opacity: 0.6;
+  }
+  .metric-foot {
+    max-width: calc(100% - 4px);
+    font-size: 9px;
+  }
+  .bottom-grid {
+    grid-template-columns: 1fr;
+    margin-top: 16px;
+  }
+  .content-grid {
+    gap: 16px;
+  }
+  .panel {
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .trend-chart {
+    min-height: 165px;
+  }
+  .metric-tabs {
+    gap: 3px;
+  }
+  .metric-tabs button {
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+  .segmented button {
+    padding: 5px 7px;
+  }
+  .panel-head h2 {
+    font-size: 15px;
+  }
+  .panel-head {
+    gap: 6px;
+  }
+  .chart-footer {
+    font-size: 9px;
+  }
+  .banner {
+    font-size: 10px;
+    padding: 10px;
+  }
+  .banner .link-button {
+    font-size: 10px;
+  }
+  .banner > span {
+    flex: 1;
+  }
+  .page-footer {
+    display: block;
+    font-size: 9px;
+  }
+  .footer-links {
+    margin-top: 10px;
+  }
+  .stats-three {
+    gap: 9px;
+  }
+  .stats-three .panel {
+    padding: 15px 12px;
+  }
+  .stats-three .big-number {
+    font-size: 24px;
+  }
+  .stats-three .panel-subtitle {
+    font-size: 9px;
+  }
+  .empty-onboarding {
+    padding: 21px;
+  }
+  .onboarding-copy h2 {
+    font-size: 18px;
+  }
+  .onboarding-copy p {
+    font-size: 11px;
+  }
+  .coverage {
+    gap: 5px;
+  }
+  .coverage-cell {
+    padding: 13px 3px;
+    font-size: 10px;
+  }
+  .coverage-cell small {
+    font-size: 8px;
+  }
+  .form-row {
+    gap: 12px;
+  }
+  .field {
+    font-size: 10px;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 12px;
+  }
+  .code-box {
+    font-size: 9px;
+  }
+  .settings-grid {
+    gap: 16px;
+  }
+  .stack {
+    gap: 16px;
+  }
+  .advice-card p {
+    font-size: 11px;
+  }
+  .sleep-legend {
+    gap: 8px;
+  }
+  .sleep-legend .stage-name {
+    font-size: 9px;
+  }
+  #toast {
+    left: 50%;
+  }
+  .topbar .badge {
+    font-size: 9px;
+  }
+  .checkin-top {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .record-card {
+    padding: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

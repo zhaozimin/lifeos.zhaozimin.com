@@ -1,0 +1,8 @@
+/* [INPUT]: styles 模块的附加页样式；控件外观来自 zzm.css 与 dashboard 的 fields.css。
+ * [OUTPUT]: 云端登录、历史记录与原话收件箱的样式入口。
+ * [POS]: 样式限定 cloud-legacy；主面板样式由 dashboard/index.css 提供。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md */
+@import "./styles/base.css";
+@import "./styles/records.css";
+@import "./styles/inbox.css";
+@import "./styles/auth.css";

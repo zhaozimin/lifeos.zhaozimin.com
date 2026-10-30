@@ -1,0 +1,15 @@
+# [INPUT]: 北京时间日历与订阅备份服务。
+# [OUTPUT]: 每日02:10加密订阅备份，错过后补跑。
+# [POS]: 独立于电脑和主数据库备份的日历任务。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=Daily LifeOS subscriptions backup
+
+[Timer]
+OnCalendar=*-*-* 02:10:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=2min
+Unit=lifeos-subscriptions-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,21 @@
+# [INPUT]: 订阅工作库、既有私有R2配置和age公钥。
+# [OUTPUT]: 独立前缀的加密订阅归档。
+# [POS]: root短时快照进程；凭据不交给订阅应用用户。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS encrypted subscriptions backup
+After=lifeos-subscriptions.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/lifeos-backup/backup.env
+Environment=AWS_DEFAULT_REGION=auto
+Environment=AWS_EC2_METADATA_DISABLED=true
+ExecStart=/usr/bin/python3 /usr/local/lib/lifeos-backup/subscriptions-backup.py
+TimeoutStartSec=5min
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/lifeos-subscriptions /var/lib/lifeos-subscriptions-backup

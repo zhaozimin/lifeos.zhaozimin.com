@@ -1,0 +1,32 @@
+# [INPUT]: 私有数据库配置与已经构建的每日小结入口。
+# [OUTPUT]: 在允许窗口内入队一次，由现有传话筒投递。
+# [POS]: 只读汇总及回执入队；不启动第二个微信轮询器。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS daily summary enqueue
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=1h
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+User=lifeos
+Group=lifeos
+WorkingDirectory=/opt/lifeos/apps/relay
+EnvironmentFile=/etc/lifeos/relay.env
+Environment=HOME=/home/lifeos
+Environment=PATH=/home/lifeos/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=TZ=Asia/Shanghai
+ExecStart=/home/lifeos/.local/bin/node dist/src/daily.js
+Restart=on-failure
+RestartSec=10min
+TimeoutStartSec=90s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=journal
+StandardError=journal

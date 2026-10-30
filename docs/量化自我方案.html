@@ -1,0 +1,507 @@
+<!doctype html>
+<!--
+[INPUT]: 量化自我目标、数据采集范围与隐私约束。
+[OUTPUT]: 数据战略、处理流水线与落地批次。
+[POS]: docs 的数据范围依据，行动方案据此排期。
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>子民的量化自我</title>
+<meta name="description" content="子民的量化自我（Quantified Self）完整方案：采集哪些数据、用什么工具、如何处理、AI 如何使用、隐私如何分级。">
+<style>
+/* ============================================================
+   设计令牌 · 亮色 / 暗色
+   ============================================================ */
+:root{
+  --bg:#f7f6f2; --panel:#ffffff; --ink:#1d1d1b; --muted:#6b6a64; --line:#e3e1d9;
+  --accent:#c2410c; --accent-soft:#fff1e8; --ok:#15803d; --ok-soft:#ecfdf3;
+  --warn:#b45309; --warn-soft:#fffbeb; --bad:#b91c1c; --bad-soft:#fef2f2;
+  --blue:#1d4ed8; --blue-soft:#eff4ff; --vio:#6d28d9; --vio-soft:#f3efff; --code:#f1efe8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141413; --panel:#1d1d1b; --ink:#ecebe6; --muted:#a3a198; --line:#2f2e2a;
+    --accent:#fb923c; --accent-soft:#2b1a10; --ok:#4ade80; --ok-soft:#0f2417;
+    --warn:#fbbf24; --warn-soft:#2a210c; --bad:#f87171; --bad-soft:#2a1212;
+    --blue:#93b4ff; --blue-soft:#141d33; --vio:#c4b5fd; --vio-soft:#1f1833; --code:#262522;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141413; --panel:#1d1d1b; --ink:#ecebe6; --muted:#a3a198; --line:#2f2e2a;
+  --accent:#fb923c; --accent-soft:#2b1a10; --ok:#4ade80; --ok-soft:#0f2417;
+  --warn:#fbbf24; --warn-soft:#2a210c; --bad:#f87171; --bad-soft:#2a1212;
+  --blue:#93b4ff; --blue-soft:#141d33; --vio:#c4b5fd; --vio-soft:#1f1833; --code:#262522;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.75 -apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:48px 16px 96px}
+h1{font-size:34px;line-height:1.25;margin:0 0 8px}
+h2{font-size:23px;margin:60px 0 12px;padding-top:14px;border-top:1px solid var(--line)}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:8px 0}
+.meta{font-size:13px;color:var(--muted)}
+.lead{font-size:17px;margin:12px 0 24px}
+code{background:var(--code);padding:1px 6px;border-radius:4px;font-size:.88em;font-family:ui-monospace,Menlo,monospace}
+pre{background:var(--code);padding:14px 16px;border-radius:8px;overflow-x:auto;font-size:12.8px;line-height:1.6;margin:10px 0}
+pre code{background:none;padding:0}
+a{color:var(--blue)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:14px 0}
+.key{border-color:var(--accent);background:var(--accent-soft)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.grid3{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.dom{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.dom b{font-size:15.5px}
+.dom p{font-size:14px;color:var(--muted);margin:4px 0 0}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.t-p0{background:var(--accent-soft);color:var(--accent)}
+.t-p1{background:var(--blue-soft);color:var(--blue)}
+.t-p2{background:var(--vio-soft);color:var(--vio)}
+.t-ok{background:var(--ok-soft);color:var(--ok)}
+.t-warn{background:var(--warn-soft);color:var(--warn)}
+.t-bad{background:var(--bad-soft);color:var(--bad)}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14.3px;margin:10px 0}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
+td.dn{white-space:nowrap;font-weight:600}
+ul,ol{padding-left:22px;margin:6px 0}
+li{margin:4px 0}
+.diagram{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto;margin:14px 0}
+.diagram svg{display:block;min-width:760px;width:100%;height:auto}
+.cap{font-size:13px;color:var(--muted);margin:4px 0 0}
+.toc{columns:2;column-gap:32px;font-size:14.5px}
+.toc a{color:var(--ink);text-decoration:none}
+.toc a:hover{color:var(--accent)}
+.legend{font-size:13px;color:var(--muted);margin:6px 0}
+@media (max-width:640px){ .toc{columns:1} h1{font-size:27px} }
+@media print{ .diagram svg{min-width:0} body{background:#fff} }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<p class="meta">LifeOS · 量化自我方案 v1.0 · 2026-10-24 · 子民</p>
+<h1>子民的量化自我</h1>
+<p class="lead"><b>量化自我（Quantified Self）的核心不是"收集一切"，而是"先有问题，再收集刚好够回答问题的数据"。</b>本文定义要采集哪些数据、用什么工具、怎么处理，以及 AI 怎么用这些数据给你定制方案。施工细节见同目录的 <code>行动方案.html</code>：本文回答"做什么、为什么"，行动方案回答"怎么搭"。</p>
+
+<nav class="card">
+<b>目录</b>
+<div class="toc">
+<div><a href="#why">从问题出发</a></div>
+<div><a href="#map">人生数据地图</a></div>
+<div><a href="#list">完整数据清单</a></div>
+<div><a href="#gap">拿不到的数据怎么办</a></div>
+<div><a href="#doc">体检报告等文档</a></div>
+<div><a href="#flow">数据处理标准流程</a></div>
+<div><a href="#layer">数据分层与存储</a></div>
+<div><a href="#ai">AI 怎么用这些数据</a></div>
+<div><a href="#exp">个人实验</a></div>
+<div><a href="#tools">工具清单</a></div>
+<div><a href="#privacy">隐私分级</a></div>
+<div><a href="#road">落地节奏</a></div>
+<div><a href="#trap">五个常见误区</a></div>
+<div><a href="#whoop">附录：Whoop 项目迁移</a></div>
+</div>
+</nav>
+
+<!-- ============================================================
+     从问题出发
+     ============================================================ -->
+<h2 id="why">从问题出发</h2>
+<p>每加一类数据，先写下<b>它回答哪个问题</b>。写不出问题的数据，先不采集。下面是建议的起点，你可以增删：</p>
+<div class="tbl"><table>
+<tr><th>领域</th><th>你想回答的问题</th><th>需要的数据</th></tr>
+<tr><td class="dn">时间</td><td>我的时间真正花在了哪里？第一类工作每周有多少小时？</td><td>柳比歇夫记录、日历、屏幕时间</td></tr>
+<tr><td class="dn">精力</td><td>什么让我状态好，什么让我状态差？</td><td>精力打分、Whoop 恢复分、睡眠、时间记录</td></tr>
+<tr><td class="dn">身体</td><td>我的身体在变好还是变差？哪些指标要注意？</td><td>Whoop、体重、体检报告</td></tr>
+<tr><td class="dn">金钱</td><td>钱去哪了？净资产是否在增长？每小时工作值多少钱？</td><td>流水、账单、资产快照、时间记录</td></tr>
+<tr><td class="dn">目标</td><td>我离年度目标还有多远？现在做的事是否服务于目标？</td><td>目标表、时间记录、产出记录</td></tr>
+<tr><td class="dn">关系</td><td>我和重要的人多久没联系了？答应别人的事做到了吗？</td><td>见面记录、承诺记录、人脉表</td></tr>
+<tr><td class="dn">成长</td><td>我今年学到了什么、产出了什么？</td><td>读书、灵感、写作和代码产出</td></tr>
+</table></div>
+
+<!-- ============================================================
+     人生数据地图
+     ============================================================ -->
+<h2 id="map">人生数据地图</h2>
+<p>把人生分成十个领域。你现在已经覆盖了其中三个半（标为"已有"），其余六个半是本方案要补上的。</p>
+<div class="grid3">
+<div class="dom"><b>时间</b> <span class="tag t-ok">已有</span><p>柳比歇夫记录。待补：日历、屏幕时间</p></div>
+<div class="dom"><b>身体</b> <span class="tag t-ok">已有</span><p>Whoop。待补：体重、饮食</p></div>
+<div class="dom"><b>金钱</b> <span class="tag t-ok">已有</span><p>流水记账。待补：资产快照、账单导入</p></div>
+<div class="dom"><b>语言</b> <span class="tag t-warn">计划</span><p>24 小时录音转写（设备未买）</p></div>
+<div class="dom"><b>医疗</b> <span class="tag t-p0">新增</span><p>体检报告、就诊、用药、家族史</p></div>
+<div class="dom"><b>精力与情绪</b> <span class="tag t-p0">新增</span><p>每日两次 1–5 分打分、晚间复盘</p></div>
+<div class="dom"><b>目标与决策</b> <span class="tag t-p0">新增</span><p>年度 / 季度目标、决策日志</p></div>
+<div class="dom"><b>关系</b> <span class="tag t-p1">新增</span><p>见了谁、承诺、人脉表、重要日期</p></div>
+<div class="dom"><b>成长与产出</b> <span class="tag t-p1">新增</span><p>读书、课程、灵感、文章、代码</p></div>
+<div class="dom"><b>环境与沟通</b> <span class="tag t-p2">新增</span><p>位置、天气、邮件摘要</p></div>
+</div>
+<p class="legend">P0 = 立即开始 · P1 = 1–2 个月内 · P2 = 有余力再做</p>
+
+<!-- ============================================================
+     完整数据清单
+     ============================================================ -->
+<h2 id="list">完整数据清单</h2>
+<p>采集方式分三种：<b>自动</b>（不需要你做任何事）、<b>半自动</b>（定期导出或上传一次）、<b>主动</b>（你在微信里说）。<b>主动记录的总时间控制在每天 5 分钟以内</b>，否则坚持不下去。</p>
+<p>2026-10-25 管家适配：微信原话先完整保存在 <code>raw_inputs</code>；活动切换和人民币收支写独立账表。灵感、日记、情绪先加原话标签，不改写正文。这不代表已接入Obsidian、情绪评分或复盘指标表；具体工具与边界见 <code>管家元提示词.md</code>。</p>
+<div class="tbl"><table>
+<tr><th>领域</th><th>数据</th><th>来源 / 工具</th><th>方式</th><th>频率</th><th>优先级</th></tr>
+<tr><td class="dn">时间</td><td>正在做什么、起止时间、分类</td><td>微信机器人</td><td>主动</td><td>随时</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td></td><td>日程安排</td><td>Google / iCloud 日历（CalDAV 或 API）</td><td>自动</td><td>每小时</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td></td><td>电脑使用时间、各 App 时长</td><td>ActivityWatch（开源，本机运行）</td><td>自动</td><td>每天</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td class="dn">身体</td><td>恢复、HRV、静息心率、睡眠、训练</td><td>Whoop（本机 LifeOS-Whoop 已接入）</td><td>自动</td><td>30 分钟</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td></td><td>体重、体脂</td><td>智能体重秤 / 微信里说"体重 72.5"</td><td>主动</td><td>每周 2–3 次</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td></td><td>饮食</td><td>微信拍照或文字，AI 粗估</td><td>主动</td><td>可选</td><td><span class="tag t-p2">P2</span></td></tr>
+<tr><td></td><td>步数、心率等手机健康数据</td><td>iPhone：Health Auto Export 推送 · Android：Health Connect</td><td>自动</td><td>每天</td><td><span class="tag t-p2">P2</span></td></tr>
+<tr><td class="dn">医疗</td><td>体检指标</td><td>拍照 / PDF 上传，AI 提取，人工确认</td><td>半自动</td><td>每年</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td></td><td>就诊、用药、过敏史、家族史</td><td>微信说 / 网站表单</td><td>主动</td><td>发生时</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td class="dn">金钱</td><td>每笔开销和收入</td><td>微信机器人</td><td>主动</td><td>随时</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td></td><td>完整账单（补漏、对账）</td><td>微信支付、支付宝导出的账单文件</td><td>半自动</td><td>每月</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td></td><td>各账户余额、投资、负债</td><td>微信说"招行 52000，基金 13 万"</td><td>主动</td><td>每月 1 日</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td></td><td>订阅与固定支出</td><td>SubOS已迁VPS；LifeOS内保留周期、余额、银行卡和统计</td><td>主动</td><td>变化时</td><td><span class="tag t-ok">订阅已接入</span></td></tr>
+<tr><td class="dn">精力情绪</td><td>精力和心情 1–5 分</td><td>微信：早上和下午各一次</td><td>主动</td><td>每天 2 次</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td></td><td>晚间复盘：今天最重要的事、最大的阻碍、明天第一件事</td><td>微信：机器人 22:30 提问</td><td>主动</td><td>每天</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td class="dn">目标决策</td><td>年度 / 季度目标、关键结果</td><td>网站表单</td><td>主动</td><td>每季度</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td></td><td>重大决策：决定了什么、为什么、预期结果</td><td>微信说"决定：……"</td><td>主动</td><td>发生时</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td class="dn">关系</td><td>见了谁、聊了什么、答应了什么</td><td>微信说 / 以后由录音自动提取</td><td>主动</td><td>发生时</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td></td><td>人脉卡：重要的人、生日、上次联系时间</td><td>网站表单 + 自动更新</td><td>半自动</td><td>变化时</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td class="dn">成长产出</td><td>读书、课程、灵感</td><td>微信说"灵感：……""读完《X》"</td><td>主动</td><td>发生时</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td></td><td>代码提交、文章发布</td><td>GitHub API、博客 RSS</td><td>自动</td><td>每天</td><td><span class="tag t-p2">P2</span></td></tr>
+<tr><td></td><td>笔记</td><td>Obsidian 库（本机，只读索引）</td><td>自动</td><td>每天</td><td><span class="tag t-p2">P2</span></td></tr>
+<tr><td class="dn">环境沟通</td><td>天气</td><td>天气 API（按所在城市）</td><td>自动</td><td>每天</td><td><span class="tag t-p2">P2</span></td></tr>
+<tr><td></td><td>位置轨迹</td><td>手机定位导出</td><td>半自动</td><td>每月</td><td><span class="tag t-p2">P2</span></td></tr>
+<tr><td></td><td>邮件摘要与待办</td><td>IMAP 只读（见下一节）</td><td>自动</td><td>每小时</td><td><span class="tag t-p2">P2</span></td></tr>
+<tr><td class="dn">语言</td><td>说过的每一句话</td><td>录音设备导出原文（设备未买）</td><td>半自动</td><td>每天</td><td><span class="tag t-p2">以后</span></td></tr>
+</table></div>
+<p><b>每天的主动记录预算</b>：早上打分 10 秒 + 白天随手记约 2 分钟 + 下午打分 10 秒 + 晚间复盘约 2 分钟，<b>合计不到 5 分钟</b>。</p>
+
+<!-- ============================================================
+     拿不到的数据
+     ============================================================ -->
+<h2 id="gap">拿不到的数据怎么办</h2>
+<div class="card key">
+<b>原则：不求全量，只求信号。</b>你需要的不是全部聊天记录，而是聊天记录里的<b>三样东西：见了谁、聊了什么事、答应了什么</b>。用成本低的"代理数据"拿到这三样，效果和全量记录差不多，风险小得多。
+</div>
+
+<div class="tbl"><table>
+<tr><th>数据</th><th>能不能拿到</th><th>建议做法</th></tr>
+<tr><td class="dn">邮件</td><td><span class="tag t-ok">能</span>大部分邮箱支持 IMAP 只读访问</td><td>不存全文。每小时读取新邮件，只存发件人、主题、时间，再由 AI 提取摘要和待办。工作邮箱先确认公司政策是否允许</td></tr>
+<tr><td class="dn">微信聊天</td><td><span class="tag t-bad">不建议</span>没有官方接口</td><td>第三方解密本地数据库的工具违反微信条款，版本一升级就失效，而且涉及大量他人隐私。改用三个代理：① 晚间复盘时说一句"今天和谁谈了什么"；② 重要的结论截图，或者直接复述给机器人；③ 以后用录音覆盖线下对话</td></tr>
+<tr><td class="dn">短信、电话</td><td><span class="tag t-warn">部分</span>Android 可以导出，iPhone 很难</td><td>价值低，跳过</td></tr>
+<tr><td class="dn">社交媒体</td><td><span class="tag t-warn">部分</span>大部分平台支持申请数据导出</td><td>只关心自己的发布内容时，每年导出一次存档即可</td></tr>
+<tr><td class="dn">浏览记录</td><td><span class="tag t-ok">能</span>ActivityWatch 浏览器插件</td><td>只统计网站时长，不存具体网址</td></tr>
+</table></div>
+
+<!-- ============================================================
+     文档类数据
+     ============================================================ -->
+<h2 id="doc">体检报告等文档</h2>
+<p><b>应该上传。</b>体检报告是价值最高的数据之一：一年一份，但能看出身体多年的趋势。关键是<b>把照片变成一个个指标</b>，而不只是存一张图片。</p>
+
+<h3>处理流程</h3>
+<ol>
+<li><b>上传</b>：在网站的上传页面提交照片或 PDF。不走微信，因为微信机器人通道收文件不稳定。</li>
+<li><b>存原件</b>：原文件存进 Supabase Storage 的私有目录。原件永远保留，作为依据。</li>
+<li><b>AI 提取</b>：解析器（agy + Gemini）读取图片或 PDF，输出每个指标：名称、数值、单位、参考范围、是否异常、检查日期、机构。</li>
+<li><b>人工确认（必须做）</b>：网站把原图和提取结果并排显示，你逐项确认或修改。<b>医疗数字识别错一位就会误导判断，不确认的结果不入库。</b></li>
+<li><b>入库</b>：写入 <code>lab_results</code> 表。同一个指标统一名称和单位，例如"低密度脂蛋白"统一记为 LDL-C，单位 mmol/L。</li>
+<li><b>出趋势</b>：网站为每个指标画多年趋势线。AI 只提示"这项指标连续两年上升，建议咨询医生"，<b>不做诊断</b>。</li>
+</ol>
+
+<h3>同一流程适用的其他文档</h3>
+<div class="tbl"><table>
+<tr><th>文档</th><th>提取什么</th><th>建议</th></tr>
+<tr><td>体检报告、化验单</td><td>每个指标的数值、单位、参考范围</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td>病历、处方</td><td>诊断、药品、剂量、日期</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td>保单</td><td>险种、保额、到期日、缴费日</td><td><span class="tag t-p1">P1</span>，到期前提醒</td></tr>
+<tr><td>合同、租约</td><td>对方、金额、关键日期</td><td><span class="tag t-p2">P2</span></td></tr>
+<tr><td>身份证、护照、银行卡</td><td>—</td><td><span class="tag t-bad">不上传</span>泄露的代价远大于用处。只记"护照 2031 年到期"这类日期</td></tr>
+</table></div>
+
+<!-- ============================================================
+     数据处理标准流程
+     ============================================================ -->
+<h2 id="flow">数据处理标准流程</h2>
+<p>不管哪一类数据，都走同一条流水线。新增一类数据，只需要写一个新的"采集器"，后面的步骤全部复用。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 980 300" role="img" aria-label="数据处理流水线：采集、存原始、结构化、确认、入库、计算、洞察、行动，行动后回到采集形成闭环">
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker>
+  </defs>
+  <style>
+    .b{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+    .bk{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+    .bb{fill:var(--blue-soft);stroke:var(--blue);stroke-width:1.5}
+    .bv{fill:var(--vio-soft);stroke:var(--vio);stroke-width:1.5}
+    .t{fill:var(--ink);font-size:14px;font-weight:700}
+    .s{fill:var(--muted);font-size:11.5px}
+    .z{fill:var(--muted);font-size:12px;font-weight:600}
+    .l{stroke:var(--muted);stroke-width:1.4;fill:none;marker-end:url(#a2)}
+  </style>
+  <text x="20" y="26" class="z">程序负责（确定、可重复）</text>
+  <text x="640" y="26" class="z">AI 负责（解读、建议）</text>
+
+  <rect x="20"  y="40" width="104" height="84" rx="10" class="b"/>
+  <text x="34" y="68" class="t">① 采集</text><text x="34" y="90" class="s">微信 / API</text><text x="34" y="108" class="s">文件 / 表单</text>
+
+  <rect x="140" y="40" width="104" height="84" rx="10" class="bk"/>
+  <text x="154" y="68" class="t">② 存原始</text><text x="154" y="90" class="s">原话、原文件</text><text x="154" y="108" class="s">永不删除</text>
+
+  <rect x="260" y="40" width="104" height="84" rx="10" class="b"/>
+  <text x="274" y="68" class="t">③ 结构化</text><text x="274" y="90" class="s">AI 提取 JSON</text><text x="274" y="108" class="s">schema 校验</text>
+
+  <rect x="380" y="40" width="104" height="84" rx="10" class="b"/>
+  <text x="394" y="68" class="t">④ 确认</text><text x="394" y="90" class="s">医疗、资产</text><text x="394" y="108" class="s">必须人工确认</text>
+
+  <rect x="500" y="40" width="104" height="84" rx="10" class="bb"/>
+  <text x="514" y="68" class="t">⑤ 入库</text><text x="514" y="90" class="s">Supabase</text><text x="514" y="108" class="s">唯一真源</text>
+
+  <rect x="620" y="40" width="104" height="84" rx="10" class="bb"/>
+  <text x="634" y="68" class="t">⑥ 计算</text><text x="634" y="90" class="s">SQL 算指标</text><text x="634" y="108" class="s">数字不交给 AI</text>
+
+  <rect x="740" y="40" width="104" height="84" rx="10" class="bv"/>
+  <text x="754" y="68" class="t">⑦ 洞察</text><text x="754" y="90" class="s">AI 读快照</text><text x="754" y="108" class="s">找规律、解释</text>
+
+  <rect x="860" y="40" width="104" height="84" rx="10" class="bv"/>
+  <text x="874" y="68" class="t">⑧ 行动</text><text x="874" y="90" class="s">计划、提醒</text><text x="874" y="108" class="s">个人实验</text>
+
+  <path d="M124 82 H140" class="l"/><path d="M244 82 H260" class="l"/><path d="M364 82 H380" class="l"/>
+  <path d="M484 82 H500" class="l"/><path d="M604 82 H620" class="l"/><path d="M724 82 H740" class="l"/><path d="M844 82 H860" class="l"/>
+  <path d="M912 124 V200 H72 V124" class="l"/>
+  <text x="380" y="222" class="s">⑨ 复盘：行动的结果成为新的数据，再进入采集。每周、每月、每年各复盘一次</text>
+  <text x="20" y="270" class="s">③ 的结构化允许用 AI，但输出必须通过程序校验；⑥ 的所有数字都由数据库计算；⑦ 的 AI 只解读这些数字，不自己算。</text>
+</svg>
+</div>
+
+<h3>每条数据都必须带的五个字段</h3>
+<div class="tbl"><table>
+<tr><th>字段</th><th>含义</th><th>为什么</th></tr>
+<tr><td><code>source</code></td><td>来自哪里：wechat、whoop、upload、imap……</td><td>出错时能追到源头</td></tr>
+<tr><td><code>occurred_at</code></td><td>事情发生的时间（带时区）</td><td>和"记录时间"区分开。补记昨天的事很常见</td></tr>
+<tr><td><code>raw_ref</code></td><td>指向原始记录的 ID</td><td>结构化结果错了，可以从原始记录重新生成</td></tr>
+<tr><td><code>confidence</code></td><td>可信度：confirmed（人工确认）、parsed（AI 提取）、estimated（估算）</td><td>AI 分析时区别对待。估算的饮食热量不能当准确值用</td></tr>
+<tr><td><code>deleted_at</code></td><td>软删除标记</td><td>撤销操作可以恢复，历史可追溯</td></tr>
+</table></div>
+<p>另外三条规则：<b>缺失不等于零</b>（没记录就是 null，图表不能画成 0）；<b>单位统一</b>（金额用分，体重用 kg，时间用 timestamptz）；<b>分类只增不改</b>。本人明确要求重分类时，保留原始时段与版本后应用新大类。2026-10-26起夜间和午睡均以WHOOP已评分实睡校准；手工睡眠首尾差额按本人规则推定刷手机。具体口径见<code>时间分类与睡眠规则.md</code>。</p>
+
+<!-- ============================================================
+     数据分层
+     ============================================================ -->
+<h2 id="layer">数据分层与存储</h2>
+<div class="tbl"><table>
+<tr><th>层</th><th>存什么</th><th>存在哪</th><th>怎么查</th></tr>
+<tr><td class="dn">原始层</td><td>原话、原始文件（体检报告、账单）、Whoop 原始记录</td><td>Supabase 表 + Storage 私有目录</td><td>按 ID 回溯</td></tr>
+<tr><td class="dn">事实层</td><td>时间、金钱、资产、身体、医疗指标、关系、产出等结构化记录</td><td>Supabase 表</td><td>SQL，结果精确</td></tr>
+<tr><td class="dn">画像层</td><td>目标、偏好、约束、长期状态（"正在备战马拉松"）</td><td>Supabase <code>profile</code> 表，几十条</td><td>每次 AI 调用都附带</td></tr>
+<tr><td class="dn">语义层</td><td>微信对话已接入；其他文本按批次新增</td><td>MemOS Cloud已启用；原话与回复版本仍存Supabase</td><td>按意思召回，并保留原文来源</td></tr>
+<tr><td class="dn">洞察层</td><td>AI 写的日报、周报、建议、实验结论</td><td>Supabase <code>insights</code> 表</td><td>按日期回看，检验 AI 说得准不准</td></tr>
+</table></div>
+
+<h3>需要新增的表</h3>
+<p>在行动方案 v1.0 的四张表之外，新增下面这些表。每张表都带上一节的五个标准字段。</p>
+<div class="tbl"><table>
+<tr><th>表</th><th>内容</th><th>优先级</th></tr>
+<tr><td><code>conversation_messages</code> / <code>memory_jobs</code></td><td>已建：用户原文引用、回复版本、渠道确认与云任务。逐次HTTP事件尚未建表</td><td><span class="tag t-p0">已接入</span></td></tr>
+<tr><td><code>energy_logs</code></td><td>精力分、心情分、一句备注</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td><code>reflections</code></td><td>晚间复盘的三个回答</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td><code>goals</code></td><td>目标、关键结果、周期、状态、进度</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td><code>accounts</code> / <code>asset_snapshots</code></td><td>账户清单；每月各账户余额，用来算净资产</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td><code>documents</code> / <code>lab_results</code></td><td>上传的文档；从体检报告里提取的指标</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td><code>profile</code></td><td>画像条目：类别、内容、生效时间</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td><code>insights</code></td><td>AI 生成的报告和建议</td><td><span class="tag t-p0">P0</span></td></tr>
+<tr><td><code>body_metrics</code></td><td>体重、体脂、血压等手动记录的指标</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td><code>people</code> / <code>interactions</code> / <code>commitments</code></td><td>人脉卡；每次见面或交流；答应别人和别人答应的事</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td><code>decisions</code></td><td>决策、理由、预期、复查日期、实际结果</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td><code>learning_logs</code> / <code>ideas</code></td><td>读书、课程、灵感</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td><code>experiments</code></td><td>个人实验（见后文）</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td><code>calendar_events</code> / <code>screen_time</code></td><td>日程；每天各 App 的使用时长</td><td><span class="tag t-p1">P1</span></td></tr>
+<tr><td><code>whoop_*</code></td><td>由 LifeOS-Whoop 同步过来的身体数据</td><td><span class="tag t-p0">P0</span></td></tr>
+</table></div>
+
+<!-- ============================================================
+     AI 怎么用
+     ============================================================ -->
+<h2 id="ai">AI 怎么用这些数据</h2>
+<p>两种方式：<b>你问它答</b>（随时），<b>它定时给你</b>（固定节奏）。两种方式都遵循同一个做法：程序先用 SQL 算好一份<b>数据快照</b>，再连同画像一起交给 AI。AI 不直接读数据库。</p>
+
+<h3>固定节奏</h3>
+<div class="tbl"><table>
+<tr><th>时间</th><th>内容</th><th>用到的数据</th><th>送达</th></tr>
+<tr><td class="dn">每天 07:00</td><td>今日建议：适合高强度工作还是恢复；今天日程里最重要的一件事</td><td>Whoop 恢复、睡眠、日历、目标</td><td>微信一条</td></tr>
+<tr><td class="dn">每天 22:30</td><td>复盘提问 + 今日小结：时间分布、支出、没记录的时间段</td><td>时间、金钱、精力</td><td>微信一条</td></tr>
+<tr><td class="dn">每周日</td><td>周报：时间去哪了、钱去哪了、精力的规律、离目标还差多少、下周三条建议</td><td>全部</td><td>网站全文 + 微信摘要</td></tr>
+<tr><td class="dn">每月 1 日</td><td>月报：净资产变化、身体趋势、目标进度、实验结论</td><td>全部</td><td>网站</td></tr>
+<tr><td class="dn">每年末</td><td>年度回顾：一年的时间账、身体变化、体检对比、关键决策复查</td><td>全部</td><td>网站</td></tr>
+</table></div>
+
+<h3>你可以随时问的问题（示例）</h3>
+<ul>
+<li>"上个月我的深度工作时间为什么少了？"</li>
+<li>"我睡够 7 小时的第二天，工作效率是不是更高？"</li>
+<li>"哪些消费发生在我精力低的日子？"</li>
+<li>"我多久没联系老王了？上次我答应他什么？"</li>
+<li>"按现在的节奏，年底能完成目标吗？"</li>
+<li>"我的血脂这几年是什么趋势？"</li>
+</ul>
+
+<h3>保证 AI 说得对的四条规则</h3>
+<ol>
+<li><b>数字由 SQL 算，AI 只解读。</b>回答里出现的每个数字都必须来自快照。</li>
+<li><b>相关不等于因果。</b>AI 发现"喝咖啡的日子效率高"时，必须说成"相关"，并建议用个人实验来验证。</li>
+<li><b>样本太少时不下结论。</b>少于 14 个数据点，只描述情况，不判断规律。本机 Whoop 项目已经在用这条规则。</li>
+<li><b>不做医疗诊断。</b>健康相关的内容只描述趋势，建议咨询医生。</li>
+</ol>
+
+<!-- ============================================================
+     个人实验
+     ============================================================ -->
+<h2 id="exp">个人实验</h2>
+<p>个人实验是量化自我区别于普通记录的关键：<b>不只是观察自己，还要主动改变一件事，看数据怎么变</b>。这在研究里叫 N-of-1 实验，即样本只有你一个人的实验。</p>
+<div class="tbl"><table>
+<tr><th>步骤</th><th>示例</th></tr>
+<tr><td class="dn">假设</td><td>晚上 22:00 后不看手机，我的睡眠会变好</td></tr>
+<tr><td class="dn">指标</td><td>Whoop 睡眠表现分、入睡时间、第二天早上的精力分</td></tr>
+<tr><td class="dn">基线</td><td>实验前 14 天的数据（系统里已经有了）</td></tr>
+<tr><td class="dn">干预</td><td>连续 14 天执行，每天在微信里说"实验打卡"</td></tr>
+<tr><td class="dn">结论</td><td>系统自动对比前后 14 天，AI 写一段结论，存入 <code>insights</code></td></tr>
+</table></div>
+<p>每个季度做 1–2 个实验就够。AI 也可以根据你的数据提出实验建议。</p>
+
+<!-- ============================================================
+     工具清单
+     ============================================================ -->
+<h2 id="tools">工具清单</h2>
+<div class="tbl"><table>
+<tr><th>用途</th><th>工具</th><th>状态</th><th>说明</th></tr>
+<tr><td>主动记录入口</td><td>微信机器人（iLink 官方通道）</td><td><span class="tag t-warn">施工中</span></td><td>所有主动记录的唯一入口</td></tr>
+<tr><td>解析和分析</td><td>Antigravity CLI（<code>agy</code>，模型 gemini-3.8-flash-high，你的订阅）</td><td><span class="tag t-ok">已部署</span></td><td>VPS 上已通过无界面调用验收（见 部署记录.md）。处理体检报告前，需要先验证它读图片和 PDF 的能力</td></tr>
+<tr><td>数据中心</td><td>Supabase（Postgres + Storage + pgvector）</td><td><span class="tag t-warn">施工中</span></td><td>唯一真源</td></tr>
+<tr><td>可视化面板</td><td>自建网站（Next.js + Vercel + Cloudflare Access）</td><td><span class="tag t-warn">施工中</span></td><td>全部数据的统一面板</td></tr>
+<tr><td>身体数据</td><td>Whoop + 本机 LifeOS-Whoop</td><td><span class="tag t-ok">已有</span></td><td>迁移到 VPS，见附录</td></tr>
+<tr><td>本机智能体</td><td>Hermes（LifeOS）</td><td><span class="tag t-ok">已有</span></td><td>通过 Supabase MCP 读数据，不再自存数据</td></tr>
+<tr><td>电脑使用时间</td><td><a href="https://activitywatch.net/">ActivityWatch</a></td><td><span class="tag t-p1">P1</span></td><td>开源，数据只在本机，每天汇总一次上传</td></tr>
+<tr><td>日历</td><td>Google Calendar API / iCloud CalDAV</td><td><span class="tag t-p1">P1</span></td><td>只读</td></tr>
+<tr><td>账单</td><td>微信支付、支付宝的账单导出</td><td><span class="tag t-p1">P1</span></td><td>每月导出一次，用来对账、补漏</td></tr>
+<tr><td>手机健康数据</td><td>iPhone：Health Auto Export · Android：Health Connect</td><td><span class="tag t-p2">P2</span></td><td>取决于你的手机（待确认）</td></tr>
+<tr><td>邮件</td><td>IMAP 只读</td><td><span class="tag t-p2">P2</span></td><td>只存摘要和待办，不存全文</td></tr>
+<tr><td>长期记忆</td><td><a href="https://memos.openmem.net/">MemOS Cloud</a></td><td><span class="tag t-p2">微信已启用</span></td><td>relay后台同步双方文字，回答前召回；其他AI入口尚未接入</td></tr>
+<tr><td>录音</td><td>能导出原文的录音设备</td><td><span class="tag t-p2">以后</span></td><td>设备未买</td></tr>
+</table></div>
+
+<!-- ============================================================
+     隐私分级
+     ============================================================ -->
+<h2 id="privacy">隐私分级</h2>
+<p>数据越敏感，交给 AI 的内容越少，存储越严格。</p>
+<div class="tbl"><table>
+<tr><th>级别</th><th>数据</th><th>交给 AI 的方式</th><th>存储</th></tr>
+<tr><td><span class="tag t-ok">L1 普通</span></td><td>时间记录、读书、灵感、天气</td><td>明细可以发送</td><td>常规</td></tr>
+<tr><td><span class="tag t-p1">L2 个人</span></td><td>精力、情绪、复盘、日程、屏幕时间</td><td>明细可以发送，去掉他人姓名</td><td>常规</td></tr>
+<tr><td><span class="tag t-warn">L3 敏感</span></td><td>财务、资产、位置、人际、邮件摘要</td><td>只发汇总值（按分类合计、按月），不发账号和具体地址</td><td>账号只存后四位</td></tr>
+<tr><td><span class="tag t-bad">L4 高敏</span></td><td>医疗、体检、他人的对话、声纹</td><td>只发你选中的指标趋势；他人的原话不发</td><td>原件存在私有目录；每年检查一次谁能访问</td></tr>
+</table></div>
+<p>另外：你的数据会经过 Google（Gemini）。请查看 Gemini 订阅条款里关于数据用途的规定，确认后再决定 L3、L4 数据的发送范围。</p>
+
+<!-- ============================================================
+     落地节奏
+     ============================================================ -->
+<h2 id="road">落地节奏</h2>
+<p><b>不要一次全部上线。</b>每个阶段先用满一个月，确认坚持得下来，再加下一批。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 980 230" role="img" aria-label="落地节奏：第一批时间金钱身体目标，第二批资产账单体检日历，第三批关系成长邮件，第四批录音和长期记忆">
+  <style>
+    .c0{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+    .c1{fill:var(--blue-soft);stroke:var(--blue);stroke-width:1.5}
+    .c2{fill:var(--vio-soft);stroke:var(--vio);stroke-width:1.5}
+    .c3{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+    .h{fill:var(--ink);font-size:15px;font-weight:700}
+    .w{fill:var(--muted);font-size:12px}
+    .i{fill:var(--ink);font-size:12.5px}
+    .rail{stroke:var(--line);stroke-width:3}
+    .dot{fill:var(--ok)}
+    .g{fill:var(--ok);font-size:11px;font-weight:600}
+  </style>
+  <line x1="20" y1="196" x2="960" y2="196" class="rail"/>
+  <rect x="20"  y="20" width="220" height="150" rx="12" class="c0"/>
+  <text x="36" y="48" class="h">第一批 · 现在</text><text x="36" y="68" class="w">随行动方案 P1–P2 上线</text>
+  <text x="36" y="94" class="i">· 时间、金钱流水</text><text x="36" y="114" class="i">· Whoop 迁移</text><text x="36" y="134" class="i">· 精力打分、晚间复盘</text><text x="36" y="154" class="i">· 目标、画像</text>
+  <rect x="260" y="20" width="220" height="150" rx="12" class="c1"/>
+  <text x="276" y="48" class="h">第二批 · 第 2 个月</text><text x="276" y="68" class="w">补齐"钱"和"身体"</text>
+  <text x="276" y="94" class="i">· 资产快照、账单导入</text><text x="276" y="114" class="i">· 体检报告上传</text><text x="276" y="134" class="i">· 日历、屏幕时间</text><text x="276" y="154" class="i">· 周报、月报</text>
+  <rect x="500" y="20" width="220" height="150" rx="12" class="c2"/>
+  <text x="516" y="48" class="h">第三批 · 第 3–4 个月</text><text x="516" y="68" class="w">补齐"人"和"成长"</text>
+  <text x="516" y="94" class="i">· 人脉、见面、承诺</text><text x="516" y="114" class="i">· 读书、灵感、决策</text><text x="516" y="134" class="i">· 邮件摘要</text><text x="516" y="154" class="i">· 第一个个人实验</text>
+  <rect x="740" y="20" width="220" height="150" rx="12" class="c3"/>
+  <text x="756" y="48" class="h">第四批 · 买设备后</text><text x="756" y="68" class="w">补齐"语言"</text>
+  <text x="756" y="94" class="i">· 录音原文导入</text><text x="756" y="114" class="i">· 承诺自动提取</text><text x="756" y="134" class="i">· MemOS 长期记忆</text><text x="756" y="154" class="i">· 年度回顾</text>
+  <circle cx="250" cy="196" r="7" class="dot"/><text x="190" y="220" class="g">连续记录 30 天</text>
+  <circle cx="490" cy="196" r="7" class="dot"/><text x="430" y="220" class="g">第一份月报可读</text>
+  <circle cx="730" cy="196" r="7" class="dot"/><text x="666" y="220" class="g">周报建议被采纳</text>
+</svg>
+<p class="cap">绿点是进入下一批的条件。一批没有坚持下来，就先简化这一批，不急着加新的。</p>
+</div>
+
+<!-- ============================================================
+     误区
+     ============================================================ -->
+<h2 id="trap">五个常见误区</h2>
+<div class="grid">
+<div class="card"><b>1. 收集癖</b><p>什么都记，但从来不看。对策：每类数据都要写明回答哪个问题；连续三个月没被任何报告用到的数据，停止采集。</p></div>
+<div class="card"><b>2. 记录疲劳</b><p>手动记录太多，两周后放弃。对策：主动记录每天不超过 5 分钟；能自动采集的，绝不手动。</p></div>
+<div class="card"><b>3. 被指标绑架</b><p>为了让数字好看而改变行为，比如为了恢复分不敢训练。对策：指标服务目标，每季度检查一次指标是否还和目标一致。</p></div>
+<div class="card"><b>4. 完美主义</b><p>漏记一天就觉得数据没用了。对策：缺失就是缺失，系统允许空白。连续 80% 的覆盖率已经足够看出规律。</p></div>
+<div class="card"><b>5. 相信 AI 编的数字</b><p>AI 自己算数，或者把相关说成因果。对策：数字全部由 SQL 计算，因果结论必须经过个人实验验证。</p></div>
+</div>
+
+<!-- ============================================================
+     附录 · Whoop
+     ============================================================ -->
+<h2 id="whoop">附录：Whoop 项目迁移</h2>
+<p>本机项目 <code>2026-10-21-LifeOS-Whoop</code>（v0.4.0）已经是一个完整的身体控制台，不只是拉取脚本：Node.js 22，零第三方依赖，SQLite 存储，使用 WHOOP v2 接口，已处理令牌轮换，有测试和 GEB 文档，还带晨间训练建议和交互图表。</p>
+
+<h3>结论：整体搬到 VPS，加一个 Supabase 出口</h3>
+<div class="tbl"><table>
+<tr><th>项目现状</th><th>在 VPS 上</th><th>要不要改</th></tr>
+<tr><td>只监听 <code>127.0.0.1:3210</code></td><td>天然不对外暴露，正好符合 VPS 安全要求</td><td><span class="tag t-ok">不改</span></td></tr>
+<tr><td>授权回调地址是 <code>http://localhost:3210/api/whoop/callback</code></td><td>用 SSH 端口转发：<code>ssh -L 3210:127.0.0.1:3210 vps</code>，在 Mac 浏览器打开 localhost:3210，授权和看控制台都照常用</td><td><span class="tag t-ok">不改</span></td></tr>
+<tr><td>令牌存在 SQLite 里，并且会轮换</td><td>两边同时运行会互相作废令牌</td><td><span class="tag t-bad">必须</span>先在本机执行 <code>npm run service:uninstall</code>，再启动 VPS 上的服务</td></tr>
+<tr><td>用macOS后台服务脚本自启</td><td>VPS上不适用</td><td><span class="tag t-warn">改</span>沿用现有Node22和systemd，独立用户及私有数据目录，不另装Docker</td></tr>
+<tr><td>数据只在本机 SQLite</td><td>网站和 AI 读不到</td><td><span class="tag t-warn">新增</span>每次同步成功后，把记录和当日报告推送到 Supabase 的 <code>whoop_*</code> 表</td></tr>
+<tr><td>有脱敏摘要导出接口</td><td>正好给 AI 用</td><td><span class="tag t-ok">复用</span>周报、晨间建议直接调用</td></tr>
+</table></div>
+
+<h3>两个数据库的关系</h3>
+<p><b>Whoop 云端是原始真源，随时可以重新拉取。</b>VPS 上的 SQLite 是这个控制台自己的工作库。Supabase 是发布出来的副本，供网站和 AI 使用。这三者的关系写进项目的 L1 文档，避免以后有人搞混。</p>
+
+<h3>迁移步骤</h3>
+<ol>
+<li>在项目里增加 Supabase 出口模块，并补测试。</li>
+<li>增加独立systemd服务，沿用现有运行与备份方式。</li>
+<li>本机执行 <code>npm run service:uninstall</code>，停止后台服务。</li>
+<li>把 <code>.data/lifeos.sqlite</code> 和 <code>.env</code> 复制到 VPS 的数据卷（里面有令牌和历史数据，不需要重新授权）。</li>
+<li>启动 VPS 服务，一次性把历史记录全部推送到 Supabase。</li>
+<li>验收：连续 3 天，晨间报告按时在 07:00 发布，新数据 30 分钟内出现在 Supabase。</li>
+</ol>
+<p>统一健康页采用原版图表和交互，通过本人AAL2读取副本。当天数据未评分或同步失败时等待；晨间微信投递在设置时间至12:00间每天最多一次，并要求24小时内的会话。Webhook和历史删除镜像尚未开启。</p>
+
+<h3>参考来源</h3>
+<ul style="font-size:14px">
+<li><a href="https://en.wikipedia.org/wiki/Quantified_self">Quantified Self（维基百科）</a></li>
+<li><a href="https://activitywatch.net/">ActivityWatch</a></li>
+<li><a href="https://developer.whoop.com/docs/developing/oauth">WHOOP OAuth</a> · <a href="https://developer.whoop.com/docs/developing/v1-v2-migration">WHOOP v1→v2 迁移</a></li>
+<li><a href="https://github.com/MemTensor/MemOS">MemTensor/MemOS</a></li>
+<li><a href="https://supabase.com/docs/guides/database/extensions/pgvector">Supabase pgvector</a></li>
+</ul>
+
+<p class="meta" style="margin-top:40px">维护规则：新增一类数据前，先在"从问题出发"和"完整数据清单"里补一行，再交给施工同事实现。</p>
+
+</main>
+</body>
+</html>

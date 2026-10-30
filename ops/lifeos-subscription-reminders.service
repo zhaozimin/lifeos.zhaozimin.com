@@ -1,0 +1,28 @@
+# [INPUT]: 订阅回环API、当前微信绑定与私有数据库配置。
+# [OUTPUT]: 扣款前七天的逐笔提醒进入现有回执队列。
+# [POS]: 短时桥接任务；不写订阅、不启动微信轮询器。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS subscription payment reminders
+Wants=network-online.target lifeos-relay.service lifeos-subscriptions.service
+After=network-online.target lifeos-relay.service lifeos-subscriptions.service
+
+[Service]
+Type=oneshot
+User=lifeos
+Group=lifeos
+WorkingDirectory=/opt/lifeos/apps/relay
+EnvironmentFile=/etc/lifeos/relay.env
+Environment=HOME=/home/lifeos
+Environment=PATH=/home/lifeos/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=TZ=Asia/Shanghai
+ExecStart=/home/lifeos/.local/bin/node dist/src/subscriptions.js
+TimeoutStartSec=90s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=journal
+StandardError=journal

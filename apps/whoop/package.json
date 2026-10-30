@@ -1,0 +1,16 @@
+{
+  "name": "lifeos-whoop",
+  "version": "0.4.0",
+  "private": true,
+  "description": "本机 WHOOP 身体趋势与恢复控制台",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/vps.mjs",
+    "dev": "node --env-file-if-exists=.env --watch server/index.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check server/index.mjs && node --check public/app.js && node --check public/charts.js && node --check public/insights.js && node --check public/plans.js && node --check public/chart-help.js && node --check public/chart-interactions.js && node --check public/html.js && node --check server/cloud.mjs && node --check server/vps.mjs"
+  }
+}

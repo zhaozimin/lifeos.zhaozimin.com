@@ -1,0 +1,34 @@
+/**
+ * [INPUT]: 依赖 base.css 的面板、颜色与排版变量。
+ * [OUTPUT]: 定义多图趋势看板及其窄屏布局。
+ * [POS]: public 的趋势样式；图表随容器缩放，明细表单独滚动。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+.insight-section { margin: 28px 0; }
+.trend-range { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 22px; }
+.insight-section .section-heading { flex-wrap: wrap; gap: 10px; }
+.insight-section .section-heading > .muted { font-size: 12px; }
+.insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.insight-card { min-width: 0; padding: 22px; }
+.insight-card .panel-head { margin-bottom: 12px; }
+.insight-card h3 { font-size: 15px; }
+.insight-card .chart-wrap { margin: 0; }
+.insight-card .trend-chart { min-width: 0; width: 100%; }
+.insight-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.insight-note { font-size: 11px; line-height: 1.8; color: var(--muted, var(--text-3)); margin: 12px 0 0; }
+.insight-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 11px; color: var(--text-3); margin-top: 8px; }
+.insight-legend span { display: inline-flex; gap: 6px; align-items: center; }
+.insight-legend i { width: 9px; height: 9px; border-radius: 2px; }
+.insight-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 180px; color: var(--text-4); font-size: 13px; line-height: 1.9; background: var(--wash-1); border-radius: 8px; }
+.insight-empty small { font-size: 11px; }
+.comparison-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--chip); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 22px; }
+.comparison-strip > div { background: var(--surface); padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+.comparison-strip span, .comparison-strip small { font-size: 11px; color: var(--text-3); }
+.comparison-strip strong { font-size: 27px; font-weight: 500; font-family: var(--mono, monospace); }
+.comparison-strip strong small { font-size: 12px; }
+.recovery-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; margin: 18px 0; max-height: 300px; overflow-y: auto; }
+.calendar-day { min-width: 0; padding: 8px 2px; text-align: center; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; color: var(--text-2); }
+.calendar-day small { font-size: 8px; }
+.calendar-day b { font-size: 13px; font-weight: 500; }
+@media (max-width: 1050px) { .insight-card { padding: 18px; } }
+@media (max-width: 760px) { .insight-grid { grid-template-columns: 1fr; } .comparison-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } .trend-range { align-items: flex-start; flex-direction: column; } }

@@ -1,0 +1,11 @@
+# [INPUT]: Pages 构建目录、本机 .dev.vars 与已有 CLI 授权。
+# [OUTPUT]: 本机 Worker 预览和本人 lifeos-panel 项目的部署配置。
+# [POS]: 不声明云端密钥；生产变量继续由 Cloudflare 保存。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+name = "lifeos-panel"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-24"
+
+[[services]]
+binding = "SUBSCRIPTIONS"
+service = "lifeos-subscriptions"

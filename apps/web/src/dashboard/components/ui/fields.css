@@ -1,0 +1,133 @@
+/**
+ * [INPUT]: 依赖 zzm.css 的输入槽材质令牌（--zzm-input、--zzm-input-shadow、--zzm-focus-ring）与浮层令牌。
+ * [OUTPUT]: 对外提供 .field 输入槽外壳、.field-label/.field-hint 文字、.zzm-popover 浮层与 .option-row 选项行。
+ * [POS]: components/ui 表单原语的共享几何。.zzm-input 只认 <input>，带前后图标的外壳在此复用同一材质；
+ *        这里只引用设计系统令牌，不发明颜色与阴影。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/* ── 输入槽：键是凸的，槽是凹的。高 36 与 md 键同高，放一行能对齐 ── */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--zzm-hairline-strong);
+  background: var(--zzm-input);
+  box-shadow: var(--zzm-input-shadow);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--zzm-ink);
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.field:focus-within {
+  border-color: var(--zzm-ink);
+  box-shadow: var(--zzm-input-shadow), 0 0 0 3px var(--zzm-focus-ring);
+}
+
+/* 错误：朱色描边，原因由 .field-hint--error 写清怎么改 */
+.field[data-invalid="true"] {
+  border-color: var(--zzm-accent-ink);
+}
+
+.field--sm {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.field--area {
+  height: auto;
+  min-height: 80px;
+  padding: 8px 12px;
+  align-items: stretch;
+}
+
+.field:has(:disabled) {
+  color: var(--zzm-muted-2);
+  background: var(--zzm-key-off);
+  cursor: not-allowed;
+}
+
+.field input,
+.field textarea,
+.field select {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--zzm-muted-3);
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--zzm-text-2);
+}
+
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--zzm-muted);
+}
+
+.field-hint--error {
+  color: var(--zzm-accent-ink);
+}
+
+/* ── 浮层：下拉、日历、浮动面板。surface-2 + .14 细线 + 12 圆角 + 浮起光影 ── */
+.zzm-popover {
+  background: var(--zzm-surface-2);
+  color: var(--zzm-ink);
+  border: 1px solid var(--zzm-hairline-strong);
+  border-radius: 12px;
+  box-shadow: var(--zzm-float-shadow);
+}
+
+/* ── 选项行：扁平，不是键。悬停一层 fill，选中一层 fill-2 + 600 ── */
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--zzm-text-2);
+  cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+
+.option-row:hover,
+.option-row[data-active="true"] {
+  background: var(--zzm-fill);
+  color: var(--zzm-ink);
+}
+
+.option-row[aria-selected="true"] {
+  background: var(--zzm-fill-2);
+  color: var(--zzm-ink);
+  font-weight: 600;
+}
+
+.option-row[aria-disabled="true"] {
+  color: var(--zzm-muted-3);
+  cursor: not-allowed;
+}

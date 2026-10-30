@@ -1,0 +1,89 @@
+/**
+ * [INPUT]: 依赖 zzm.css 的 --zzm-* 令牌。
+ * [OUTPUT]: 一级栏键 .rail-item、悬停名称签 [data-tip] 与节标签 .side-label。
+ * [POS]: 工作台外壳的样式；导航行扁平不是键，当前领域用朱色淡底与朱色图标（主配色朱砂红）。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/* ── 一级栏：只有图标，名称在悬停签里 ── */
+.rail-item {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 8px;
+  color: var(--zzm-text-4);
+  transition: background .15s ease, color .15s ease;
+}
+
+.rail-item:hover,
+.rail-item[aria-pressed="true"] {
+  background: var(--zzm-fill-2);
+  color: var(--zzm-ink);
+}
+
+/* 当前领域：主配色朱砂红，朱色淡底加朱色图标 */
+.rail-item[aria-current="page"] {
+  background: var(--zzm-accent-soft);
+  color: var(--zzm-accent-ink);
+}
+
+/* 状态图标不可点：悬停不出灰底，只浮名称签 */
+.rail-item[role="status"]:hover {
+  background: transparent;
+  color: var(--zzm-text-4);
+}
+
+.rail-item:focus-visible {
+  outline: 2px solid var(--zzm-accent-line);
+  outline-offset: 0;
+}
+
+/* 悬停名称签：不可点，所以是深墨胶囊（同轻提示语法）；停 300ms 再浮现，划过不闪 */
+.rail-item[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  z-index: 70;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--zzm-ink-strong);
+  color: var(--zzm-on-ink);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-4px, -50%);
+  transition: opacity .15s ease, transform .15s cubic-bezier(.2, .7, .2, 1);
+}
+
+.rail-item[data-tip]:hover::after,
+.rail-item[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+  transition-delay: .3s;
+}
+
+/* ── 二级栏节标签；导航行由 sidebar.css 提供 ── */
+.side-label {
+  padding: 0 10px;
+  margin-bottom: 4px;
+  font-family: var(--zzm-mono);
+  font-size: 10.5px;
+  line-height: 16px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--zzm-muted);
+}
+
+/* 窄屏：一级栏变底部标签条，名称签没有悬停，改为常显小字 */
+@media (max-width: 767px) {
+  .rail-item[data-tip]::after {
+    display: none;
+  }
+}

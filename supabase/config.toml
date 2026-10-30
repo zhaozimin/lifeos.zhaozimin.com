@@ -1,0 +1,11 @@
+# [INPUT]: Supabase CLI 与单用户部署约定。
+# [OUTPUT]: CLI 项目标识与关闭公开注册的本地配置。
+# [POS]: supabase 的 CLI 入口；生产认证配置另行核对。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+project_id = "lifeos-zhaozimin"
+
+[db]
+major_version = 17
+
+[auth]
+enable_signup = false

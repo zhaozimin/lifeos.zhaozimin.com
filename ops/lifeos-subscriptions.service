@@ -1,0 +1,31 @@
+# [INPUT]: 迁入的SQLite与原版SubOS服务端。
+# [OUTPUT]: VPS回环18787上的订阅API和分钟结算。
+# [POS]: 唯一在线订阅账本；不持有微信或数据库管理密钥。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS SubOS subscriptions
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=lifeos-subscriptions
+Group=lifeos-subscriptions
+WorkingDirectory=/opt/lifeos-subscriptions/server
+Environment=SUBOS_DB=/var/lib/lifeos-subscriptions/subos.sqlite3
+Environment=SUBOS_HOST=127.0.0.1
+Environment=SUBOS_PORT=18787
+Environment=TZ=Asia/Shanghai
+EnvironmentFile=-/etc/lifeos/subscriptions.env
+ExecStart=/usr/bin/python3 subos_server.py
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/lifeos-subscriptions
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

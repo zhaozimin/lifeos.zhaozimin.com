@@ -1,0 +1,24 @@
+# [INPUT]: Cloudflare官方连接器及root私有Tunnel令牌。
+# [OUTPUT]: VPS回环订阅服务的出站私有连接。
+# [POS]: 不创建公网入口；VPC服务限定127.0.0.1:18787。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS subscriptions private Cloudflare connector
+After=network-online.target lifeos-subscriptions.service
+Wants=network-online.target lifeos-subscriptions.service
+
+[Service]
+User=lifeos-subscriptions-tunnel
+Group=lifeos-subscriptions-tunnel
+ExecStart=/usr/local/bin/lifeos-cloudflared --no-autoupdate tunnel run --token-file /etc/lifeos-subscriptions-tunnel/token
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

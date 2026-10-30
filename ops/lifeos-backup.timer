@@ -1,0 +1,15 @@
+# [INPUT]: 北京时间日历与成功配置的备份服务。
+# [OUTPUT]: 每天 02:00 触发，错过后补跑。
+# [POS]: P1 备份调度；不依赖本机开机。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=Daily LifeOS backup at 02:00 Asia/Shanghai
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=2min
+Unit=lifeos-backup.service
+
+[Install]
+WantedBy=timers.target

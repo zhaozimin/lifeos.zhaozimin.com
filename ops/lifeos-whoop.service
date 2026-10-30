@@ -1,0 +1,34 @@
+# [INPUT]: 专用WHOOP工作库、Node22与root私有发布配置。
+# [OUTPUT]: 回环控制台、定时同步和晨间计划发布。
+# [POS]: 健康域唯一刷新进程；与微信和模型用户隔离。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+[Unit]
+Description=LifeOS WHOOP health sync and morning plan
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=1h
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=lifeos-whoop
+Group=lifeos-whoop
+WorkingDirectory=/opt/lifeos-whoop
+EnvironmentFile=/etc/lifeos/whoop.env
+Environment=TZ=Asia/Shanghai
+ExecStart=/usr/bin/flock -n /var/lib/lifeos-whoop/process.lock /usr/local/lib/lifeos-whoop/node server/vps.mjs
+Restart=on-failure
+RestartSec=30s
+TimeoutStopSec=300
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/lifeos-whoop
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

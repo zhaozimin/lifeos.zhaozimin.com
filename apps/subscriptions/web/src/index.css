@@ -1,0 +1,14 @@
+/**
+ * [INPUT]: 依赖 Tailwind、纸墨朱语义令牌、页面样式与工作台共用 sidebar.css。
+ * [OUTPUT]: 应用统一视觉入口；令牌只在 tokens.css，色值指向纸墨朱
+ * [POS]: web/src 的 CSS 组合边界；导入顺序保持既有级联语义
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+@layer theme, base, zzm, components, utilities;
+@import "../../../../design/zzm/zzm.css" layer(zzm);
+@import "tailwindcss";
+@import "./design/tokens.css";
+@import "./cards.css";
+@import "./styles/base.css";
+@import "./styles/surfaces.css";
+@import "../../../web/src/dashboard/components/shell/sidebar.css";

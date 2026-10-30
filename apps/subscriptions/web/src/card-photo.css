@@ -1,0 +1,193 @@
+/**
+ * [INPUT]: 依赖 index.css 注入的纸·墨·朱令牌与 CardPhotoGenerator/CardCoverPicker 的语义类名
+ * [OUTPUT]: 对外提供卡片照片上传、脱敏预览、AI Key 配置、生成进度与卡面来源分隔样式
+ * [POS]: web/src 的 AI 卡面照片视觉子边界，从 cards.css 拆出以保持银行卡主样式文件可读
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+.card-photo-generator {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--ico-steel) 28%, var(--hairline));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--rail) 36%, var(--surface));
+}
+
+.card-photo-generator-head,
+.card-photo-generate-row,
+.card-ai-config-row,
+.card-photo-private-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-photo-generator-head strong {
+  color: var(--ink);
+  font-size: var(--fs-ui);
+}
+
+.card-photo-generator-head p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+}
+
+.card-ai-ready {
+  flex: none;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--zzm-text-4) 30%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--zzm-text-4);
+  font-size: var(--fs-kicker);
+}
+
+.card-photo-upload {
+  display: grid;
+  gap: 3px;
+  margin-top: 11px;
+  padding: 13px;
+  border: 1px dashed color-mix(in srgb, var(--ico-steel) 46%, var(--hairline));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  cursor: pointer;
+}
+
+.card-photo-upload:hover {
+  border-color: var(--ico-steel);
+}
+
+.card-photo-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.card-photo-upload span {
+  color: var(--ico-steel);
+  font-size: var(--fs-ui);
+  font-weight: 600;
+}
+
+.card-photo-upload small,
+.card-photo-generate-row small,
+.card-photo-private-preview small {
+  color: var(--muted);
+  font-size: var(--fs-kicker);
+  line-height: 1.45;
+}
+
+.card-photo-private-preview {
+  align-items: stretch;
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.card-photo-private-preview img {
+  width: 112px;
+  aspect-ratio: 1.586;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.card-photo-private-preview > div {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 10px 8px 0;
+}
+
+.card-photo-private-preview b,
+.card-photo-private-preview small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-photo-private-preview b {
+  color: var(--ink);
+  font-size: var(--fs-caption);
+}
+
+.card-ai-config {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+}
+
+.card-ai-config summary {
+  cursor: pointer;
+}
+
+.card-ai-config p {
+  margin-top: 7px;
+  line-height: 1.5;
+}
+
+.card-ai-config-row {
+  align-items: stretch;
+  margin-top: 9px;
+}
+
+.card-ai-config-row .field {
+  min-width: 0;
+}
+
+.card-photo-note,
+.card-ai-error {
+  margin-top: 10px !important;
+  line-height: 1.55;
+}
+
+.card-ai-error {
+  color: var(--zhu-text) !important;
+}
+
+.card-photo-generate-row {
+  justify-content: flex-start;
+  margin-top: 11px;
+}
+
+.card-cover-divider {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 15px 0 2px;
+  color: var(--muted);
+  font-size: var(--fs-kicker);
+}
+
+.card-cover-divider::before,
+.card-cover-divider::after {
+  height: 1px;
+  flex: 1;
+  content: "";
+  background: var(--hairline);
+}
+
+@media (max-width: 440px) {
+  .card-photo-generator-head,
+  .card-photo-generate-row,
+  .card-ai-config-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .card-ai-config-row .field,
+  .card-ai-config-row .btn {
+    width: 100%;
+  }
+}
+
+.card-photo-private-preview img {
+  image-rendering: pixelated;
+}

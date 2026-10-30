@@ -1,0 +1,748 @@
+<!doctype html>
+<!--
+[INPUT]: 产品范围、官方CLI文档与脱敏部署结论。
+[OUTPUT]: LifeOS 施工约定、解析契约和阶段验收。
+[POS]: docs 的施工真源；旧方案只供历史参考。
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LifeOS 行动方案</title>
+<meta name="description" content="LifeOS 随身管家的施工方案：微信记录 → 解析器 → Supabase → 私密网站面板。解析使用 VPS 上已授权的官方 Antigravity CLI，不使用 API Key。面向用户、施工同事与 AI 协作者。">
+<style>
+/* ============================================================
+   设计令牌 · 亮色 / 暗色
+   ============================================================ */
+:root{
+  --bg:#f7f6f2; --panel:#ffffff; --ink:#1d1d1b; --muted:#6b6a64; --line:#e3e1d9;
+  --accent:#c2410c; --accent-soft:#fff1e8; --ok:#15803d; --ok-soft:#ecfdf3;
+  --warn:#b45309; --warn-soft:#fffbeb; --bad:#b91c1c; --bad-soft:#fef2f2;
+  --blue:#1d4ed8; --blue-soft:#eff4ff; --code:#f1efe8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141413; --panel:#1d1d1b; --ink:#ecebe6; --muted:#a3a198; --line:#2f2e2a;
+    --accent:#fb923c; --accent-soft:#2b1a10; --ok:#4ade80; --ok-soft:#0f2417;
+    --warn:#fbbf24; --warn-soft:#2a210c; --bad:#f87171; --bad-soft:#2a1212;
+    --blue:#93b4ff; --blue-soft:#141d33; --code:#262522;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141413; --panel:#1d1d1b; --ink:#ecebe6; --muted:#a3a198; --line:#2f2e2a;
+  --accent:#fb923c; --accent-soft:#2b1a10; --ok:#4ade80; --ok-soft:#0f2417;
+  --warn:#fbbf24; --warn-soft:#2a210c; --bad:#f87171; --bad-soft:#2a1212;
+  --blue:#93b4ff; --blue-soft:#141d33; --code:#262522;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.75 -apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:48px 16px 96px}
+h1{font-size:34px;line-height:1.25;margin:0 0 8px}
+h2{font-size:23px;margin:60px 0 12px;padding-top:14px;border-top:1px solid var(--line)}
+h2 .no{color:var(--accent);margin-right:8px}
+h3{font-size:18px;margin:28px 0 8px}
+p{margin:8px 0}
+.meta{font-size:13px;color:var(--muted)}
+.lead{font-size:17px;margin:12px 0 24px}
+.aud{font-size:12.5px;color:var(--muted);margin:-4px 0 14px}
+code{background:var(--code);padding:1px 6px;border-radius:4px;font-size:.88em;font-family:ui-monospace,Menlo,monospace}
+pre{background:var(--code);padding:14px 16px;border-radius:8px;overflow-x:auto;font-size:12.8px;line-height:1.6;margin:10px 0}
+pre code{background:none;padding:0}
+a{color:var(--blue)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:14px 0}
+.key{border-color:var(--accent);background:var(--accent-soft)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:4px;white-space:nowrap}
+.t-ok{background:var(--ok-soft);color:var(--ok)}
+.t-warn{background:var(--warn-soft);color:var(--warn)}
+.t-bad{background:var(--bad-soft);color:var(--bad)}
+.t-blue{background:var(--blue-soft);color:var(--blue)}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14.5px;margin:10px 0}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px;white-space:nowrap}
+ul,ol{padding-left:22px;margin:6px 0}
+li{margin:4px 0}
+.diagram{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;overflow-x:auto;margin:14px 0}
+.diagram svg{display:block;min-width:760px;width:100%;height:auto}
+.cap{font-size:13px;color:var(--muted);margin:4px 0 0}
+.steps>li{margin:10px 0}
+.fail{color:var(--bad);font-size:14px}
+.must li::marker{color:var(--ok)}
+.never li::marker{color:var(--bad)}
+.check{list-style:none;padding-left:0}
+.check li{padding-left:26px;position:relative}
+.check li::before{content:"";position:absolute;left:2px;top:6px;width:14px;height:14px;border:1.5px solid var(--muted);border-radius:3px}
+.gate{font-size:14px;background:var(--ok-soft);color:var(--ink);padding:8px 12px;border-radius:8px;margin-top:8px}
+.toc{columns:2;column-gap:32px;font-size:14.5px}
+.toc a{color:var(--ink);text-decoration:none}
+.toc a:hover{color:var(--accent)}
+@media (max-width:640px){ .toc{columns:1} h1{font-size:27px} }
+@media print{ .diagram svg{min-width:0} body{background:#fff} }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<p class="meta">LifeOS 随身管家 · 行动方案 v1.25 · 2026-10-27 · 负责人：子民</p>
+<h1>LifeOS 随身管家 · 行动方案</h1>
+<p class="lead">在微信里对机器人说一句话，系统把它记成<b>时间账</b>和<b>金钱账</b>，存进 Supabase，显示在只有本人能登录的网站上。本文是整套系统的唯一施工依据。同事和 AI 都按本文搭建；代码与本文不一致时，先改本文，再改代码。</p>
+
+<nav class="card">
+<b>目录</b>
+<div class="toc">
+<div><a href="#s0">0. 读者导航</a></div>
+<div><a href="#s1">1. 一页看懂</a></div>
+<div><a href="#s2">2. 使用说明</a></div>
+<div><a href="#s3">3. 运行逻辑</a></div>
+<div><a href="#s4">4. 技术选型与约定</a></div>
+<div><a href="#s5">5. 数据模型</a></div>
+<div><a href="#s6">6. 组件规格</a></div>
+<div><a href="#s7">7. 安全设计</a></div>
+<div><a href="#s8">8. 施工路线与验收</a></div>
+<div><a href="#s9">9. 给 AI 协作者的规则</a></div>
+<div><a href="#s10">10. 待确认问题与来源</a></div>
+</div>
+</nav>
+
+<!-- ============================================================
+     0 · 读者导航
+     ============================================================ -->
+<h2 id="s0"><span class="no">0</span>读者导航</h2>
+<div class="tbl"><table>
+<tr><th>你是</th><th>必读</th><th>读完能做什么</th></tr>
+<tr><td><b>用户</b>（子民本人）</td><td>1、2</td><td>知道怎么在微信里记录，怎么登录看面板</td></tr>
+<tr><td><b>员工</b>（施工同事）</td><td>1、3、4、5、6、7、8</td><td>按阶段搭建、部署、验收整套系统</td></tr>
+<tr><td><b>AI 协作者</b>（Claude Code、Gemini 等）</td><td>全部，重点 3、5、6、9</td><td>在不违反硬约束的前提下写代码、改代码</td></tr>
+</table></div>
+
+<!-- ============================================================
+     1 · 一页看懂
+     ============================================================ -->
+<h2 id="s1"><span class="no">1</span>一页看懂</h2>
+<p class="aud">读者：所有人</p>
+
+<div class="grid">
+<div class="card">
+<b>第一版做什么</b>
+<ul>
+<li>在微信里用一句话记下时间或开销。</li>
+<li>AI 把这句话拆成结构化记录：开始时间、结束时间、分类、金额。</li>
+<li>机器人回复一条确认，可以撤销。</li>
+<li>网站显示今天、本周、本月的时间分布和开销。</li>
+</ul>
+</div>
+<div class="card">
+<b>第一版不做什么</b>
+<ul>
+<li>首期不录音、不接Whoop。本轮推进P3身体面板；录音仍在P4。</li>
+<li>只服务子民一个人，不做多用户。</li>
+<li>不频繁主动提醒。微信机器人主动发消息的额度很少。</li>
+<li>不采集新音频或图片；保留本机历史附件。</li>
+</ul>
+</div>
+</div>
+
+<div class="card key">
+<b>三条不可违背的原则</b>
+<ol>
+<li><b>原话先落库，永不丢。</b>每条消息先原样存进数据库，再交给 AI 解析。AI 失败了，可以从原话重新解析。</li>
+<li><b>Supabase 是唯一真源。</b>网站、本机 LifeOS、以后的记忆系统都从 Supabase 读数据，不再各存一份。</li>
+<li><b>大脑可替换。</b>模型通过 Parser 接口接入；当前使用官方 CLI，业务契约与模型实现分离。</li>
+</ol>
+</div>
+
+<!-- ============================================================
+     2 · 使用说明
+     ============================================================ -->
+<h2 id="s2"><span class="no">2</span>使用说明</h2>
+<p class="aud">读者：用户</p>
+
+<h3>2.1 第一次使用</h3>
+<ol>
+<li>员工部署完成后，会在 VPS 上生成一个二维码。用你的微信扫码并确认。</li>
+<li>微信里会出现一个机器人对话框。先给它发一句"你好"，激活对话。</li>
+<li>完整传话筒上线后，每句话先落库。v1.7 开始部署原话入库与 CLI 解析；以部署记录中的运行状态为准。</li>
+</ol>
+
+<h3>2.2 怎么说</h3>
+<p>像发微信给助理一样说话就行，不需要固定格式。现在以收到消息的北京时间为准；明确钟点优先，只有时长时只问一个起止锚点。</p>
+<div class="tbl"><table>
+<tr><th>你发的话</th><th>系统记成</th></tr>
+<tr><td>9点到10点写方案</td><td>闭合时间段：09:00–10:00，分类自动匹配</td></tr>
+<tr><td>现在开始写代码／休息一下／我睡了</td><td>同一边界结束旧活动，开始对应新活动</td></tr>
+<tr><td>刚写完方案，1小时20分</td><td>原话已存；只追问一个起止钟点</td></tr>
+<tr><td>午饭38，生活账户，微信付的</td><td>支出¥38.00，资金来自生活账户，渠道微信支付</td></tr>
+<tr><td>今天发工资15000</td><td>原话已存；只追问真实入账账户</td></tr>
+<tr><td>灵感：定价可以改／记一下今天见了谁</td><td>原话入库并加灵感或日记标签，尚不写入Obsidian</td></tr>
+<tr><td>好累啊</td><td>原话入库并标记情绪，不生成账目或评分</td></tr>
+</table></div>
+
+<h3>2.3 指令</h3>
+<div class="tbl"><table>
+<tr><th>发送</th><th>效果</th></tr>
+<tr><td><code>撤销</code></td><td>删除上一条消息生成的全部记录。数据库只做标记，不真正删除</td></tr>
+<tr><td><code>今天</code></td><td>回复今天的时间分类汇总和总支出</td></tr>
+<tr><td><code>帮助</code></td><td>回复指令列表和示例</td></tr>
+</table></div>
+
+<h3>2.4 回执长什么样</h3>
+<pre>✓ 写方案 · 09:00–10:00 · 60分钟 · 开发创作
+▶ 休息 · 10:00起 · 休息
+✓ ¥38.00 午饭 · 生活账户 / 微信支付 · 餐饮</pre>
+<p>必需事实不明时只追问一句，例如“这笔使用哪个资金账户？”。分类不追问；回执只依据已提交数据库事实生成。</p>
+
+<h3>2.5 查看面板</h3>
+<ol>
+<li>打开网站地址（见第 10 节）。</li>
+<li>输入本人密码，再输入手机验证器的 6 位动态码。</li>
+<li>首次进入时设置本人密码，再扫码绑定验证器。</li>
+</ol>
+
+<h3>2.6 注意</h3>
+<ul>
+<li>发语音时，请先用微信的"转文字"。系统只能读到微信转出来的文字。</li>
+<li>可以直接提问和追问。初始“收到，正在处理”是处理中确认，随后发送回答或账目回执；失败时说明原话保留并延期重试。</li>
+<li>不要在消息里写别人的隐私信息，比如身份证号或病情。</li>
+</ul>
+
+<!-- ============================================================
+     3 · 运行逻辑
+     ============================================================ -->
+<h2 id="s3"><span class="no">3</span>运行逻辑</h2>
+<p class="aud">读者：员工、AI</p>
+<p>系统由四个部件组成：<b>微信官方通道</b>、<b>VPS 上的传话筒</b>、<b>Supabase</b>、<b>网站</b>。传话筒只<b>主动向外</b>建立连接，所以 VPS 不需要开放任何对外端口。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 960 430" role="img" aria-label="系统架构图：微信经 iLink 到 VPS 传话筒，传话筒调用解析器后写入 Supabase，解析器通过官方 Antigravity CLI 调用 Gemini 3.8，网站经 Cloudflare Pages 服务端与本人 AAL2 会话读取 Supabase">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker>
+  </defs>
+  <style>
+    .bx{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+    .hl{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+    .db{fill:var(--blue-soft);stroke:var(--blue);stroke-width:1.5}
+    .zone{fill:none;stroke:var(--muted);stroke-width:1;stroke-dasharray:5 5}
+    .t{fill:var(--ink);font-size:14px;font-weight:600}
+    .s{fill:var(--muted);font-size:12px}
+    .z{fill:var(--muted);font-size:12px;font-weight:600;letter-spacing:.06em}
+    .n{fill:var(--accent);font-size:12px;font-weight:700}
+    .ln{stroke:var(--muted);stroke-width:1.4;fill:none;marker-end:url(#a1)}
+  </style>
+
+  <!-- 手机 -->
+  <rect x="20" y="60" width="150" height="76" rx="10" class="bx"/>
+  <text x="36" y="90" class="t">手机微信</text>
+  <text x="36" y="112" class="s">发一句话</text>
+
+  <!-- iLink -->
+  <rect x="210" y="60" width="160" height="76" rx="10" class="bx"/>
+  <text x="226" y="90" class="t">腾讯 iLink</text>
+  <text x="226" y="112" class="s">官方机器人通道</text>
+
+  <!-- VPS 区域 -->
+  <rect x="410" y="24" width="300" height="250" rx="14" class="zone"/>
+  <text x="426" y="46" class="z">VPS（不开放对外端口）</text>
+  <rect x="428" y="60" width="264" height="96" rx="10" class="hl"/>
+  <text x="444" y="88" class="t">传话筒 relay（Node.js）</text>
+  <text x="444" y="110" class="s">收消息 · 存原话 · 调解析器</text>
+  <text x="444" y="130" class="s">写结构化记录 · 回执 · 定时任务</text>
+  <rect x="428" y="176" width="264" height="80" rx="10" class="bx"/>
+  <text x="444" y="204" class="t">Parser 解析器</text>
+  <text x="444" y="226" class="s">官方 agy · Gemini 3.8</text>
+  <text x="444" y="244" class="s">只做一件事：原话 → JSON</text>
+
+  <!-- Supabase -->
+  <rect x="760" y="60" width="180" height="96" rx="10" class="db"/>
+  <text x="776" y="88" class="t">Supabase</text>
+  <text x="776" y="110" class="s">唯一真源</text>
+  <text x="776" y="130" class="s">Postgres + Auth + RLS</text>
+
+  <!-- 备份 -->
+  <rect x="760" y="196" width="180" height="60" rx="10" class="bx"/>
+  <text x="776" y="222" class="t">加密备份</text>
+  <text x="776" y="242" class="s">Cloudflare R2 · 每晚</text>
+
+  <!-- 网站 -->
+  <rect x="760" y="320" width="180" height="84" rx="10" class="bx"/>
+  <text x="776" y="348" class="t">网站（Cloudflare）</text>
+  <text x="776" y="370" class="s">React 可视化面板</text>
+  <text x="776" y="390" class="s">本人编辑，不持有高权限密钥</text>
+
+  <rect x="428" y="320" width="264" height="84" rx="10" class="bx"/>
+  <text x="444" y="348" class="t">Pages 服务端</text>
+  <text x="444" y="370" class="s">门禁：陌生人看不到页面</text>
+  <text x="444" y="390" class="s">密码 + 6 位 TOTP 动态码</text>
+
+  <rect x="20" y="320" width="150" height="84" rx="10" class="bx"/>
+  <text x="36" y="350" class="t">浏览器</text>
+  <text x="36" y="372" class="s">手机 / 电脑</text>
+
+  <!-- 箭头 -->
+  <path d="M170 98 H210" class="ln"/>
+  <text x="178" y="88" class="n">①</text>
+  <path d="M428 98 H370" class="ln"/>
+  <text x="380" y="88" class="n">②</text>
+  <text x="378" y="126" class="s">长轮询</text>
+  <path d="M692 90 H760" class="ln"/>
+  <text x="712" y="82" class="n">③⑥</text>
+  <path d="M560 156 V176" class="ln"/>
+  <text x="570" y="171" class="n">④⑤</text>
+  <path d="M692 230 C730 230 730 226 760 226" class="ln"/>
+  <path d="M170 362 H428" class="ln"/>
+  <path d="M692 362 H760" class="ln"/>
+  <path d="M850 320 V156" class="ln"/>
+  <text x="858" y="290" class="s">读（RLS）</text>
+</svg>
+<p class="cap">编号对应 3.1 节的步骤。虚线框内的两个部件都运行在 VPS 上。</p>
+</div>
+
+<h3>3.1 一条消息的完整旅程</h3>
+<p>示例消息："午饭 38，微信付的"，13:05 发出。</p>
+<ol class="steps">
+<li><b>① 发送。</b>子民在微信里把消息发给机器人。</li>
+<li><b>② 接收。</b>传话筒通过 iLink 长轮询收到消息，校验发送者是子民本人。<span class="fail">不是本人 → 丢弃，不回复，记一条日志。</span></li>
+<li><b>③ 存原话。</b>写入 <code>raw_inputs</code>，状态记为 <code>pending</code>。用微信消息 ID 做唯一键，同一条消息重复到达只存一次。全批原话入库成功后，才推进微信游标。普通记录同时排入“已存原话，正在整理”的确认回执。</li>
+<li><b>④ 解析。</b>传话筒把原话、接收时间、分类、独立补充及真实账户和进行中活动交给 <code>Parser</code>。管家常驻规则生成受限工具计划；重试仍使用原话接收时间。</li>
+<li><b>⑤ 校验。</b>传话筒用 schema 校验 JSON。<span class="fail">不合格 → 重试一次 → 仍不合格：状态记为 <code>failed</code>，回复"已存原话，稍后整理"，流程结束。</span></li>
+<li><b>⑥ 写记录。</b>写入 <code>transactions</code>（或 <code>time_entries</code>），关联原话 ID。原话状态改为 <code>parsed</code>。两本账与状态在同一数据库事务中提交。</li>
+<li><b>⑦ 回执。</b>传话筒读取已提交账目拼出回执，先持久化再发回微信。发送失败按退避时间重试，同一回执使用固定 client_id。<b>回执由程序拼接，不由 AI 生成</b>，保证回执和数据库内容一致。</li>
+<li><b>⑧ 显示。</b>子民打开网站，网站按 RLS 规则读取 Supabase，显示这条记录。</li>
+</ol>
+
+<h3>3.2 原话的状态</h3>
+<div class="tbl"><table>
+<tr><th>状态</th><th>含义</th><th>下一步</th></tr>
+<tr><td><code>pending</code></td><td>已存原话，等待解析</td><td>解析成功 → <code>parsed</code>；失败 → <code>failed</code></td></tr>
+<tr><td><code>awaiting_clarification</code></td><td>缺少必要信息，已发追问</td><td>仅同来源30分钟内、题型一致的短答关联补充；新活动、提问和控制指令独立执行</td></tr>
+<tr><td><code>parsed</code></td><td>已生成结构化记录</td><td>终态。撤销只标记记录，不改这个状态</td></tr>
+<tr><td><code>failed</code></td><td>解析失败（额度用完、超时、格式错误）</td><td>每 10 分钟自动重试；累计 5 次后停止重试，等人工处理</td></tr>
+<tr><td><code>ignored</code></td><td>独立补充或旧版无账目输入</td><td>终态；新版闲聊与情绪标记存档后为parsed</td></tr>
+</table></div>
+
+<h3>3.3 定时任务</h3>
+<div class="tbl"><table>
+<tr><th>时间</th><th>任务</th><th>阶段</th></tr>
+<tr><td>每 10 分钟</td><td>重试 <code>failed</code> 状态、尝试次数小于 5 的原话。成功后补发回执</td><td>P1</td></tr>
+<tr><td>每天 02:00</td><td><code>pg_dump</code> 导出数据库 → <code>age</code> 加密 → 上传 R2，保留最近 30 份</td><td>P1</td></tr>
+<tr><td>每天 23:30</td><td>推送当日小结：时间分类汇总、总支出、未记录的时间段。每天只发一条，不占用太多主动消息额度</td><td>P2</td></tr>
+</table></div>
+
+<!-- ============================================================
+     4 · 技术选型与约定
+     ============================================================ -->
+<h2 id="s4"><span class="no">4</span>技术选型与约定</h2>
+<p class="aud">读者：员工、AI</p>
+<div class="tbl"><table>
+<tr><th>层</th><th>选择</th><th>理由</th></tr>
+<tr><td>消息入口</td><td>微信 iLink 通道；独立 SDK <code>@wechatbot/wechatbot@2.2.0</code></td><td>v1.5：选用 corespeed-io/wechatbot 的独立 SDK；腾讯插件依赖完整 OpenClaw。授权脚本位于 ops；生产轮询器位于 relay，先入库再存游标</td></tr>
+<tr><td>传话筒</td><td>Node.js 22 LTS + TypeScript，由 systemd 托管</td><td>和腾讯官方插件、网站用同一种语言</td></tr>
+<tr><td>解析器</td><td>官方 Antigravity CLI；Gemini 3.8 Flash</td><td>v1.7：用户明确选择微信直接调用已授权 CLI；不使用 API Key，不自动切换付费 API</td></tr>
+<tr><td>数据库</td><td>Supabase 免费版（Postgres）</td><td>复用已停用的 SuperNote-staging 新加坡项目；备份后清除旧数据，不新建收费资源</td></tr>
+<tr><td>网站</td><td>React + Vite + Pages Worker，部署在 Cloudflare Pages</td><td>免费，和 VPS 解耦。VPS 宕机时面板照常可看</td></tr>
+<tr><td>门禁</td><td>Supabase Auth 密码 + TOTP</td><td>服务端与 RLS 双重验证本人 AAL2 会话</td></tr>
+<tr><td>校验</td><td><code>zod</code></td><td>解析结果必须通过 schema 才能入库</td></tr>
+<tr><td>备份</td><td><code>pg_dump</code> + <code>age</code> 加密 + Cloudflare R2</td><td>Supabase 免费版没有自动备份</td></tr>
+</table></div>
+
+<h3>4.1 全局约定</h3>
+<div class="tbl"><table>
+<tr><th>主题</th><th>约定</th></tr>
+<tr><td>时区</td><td>数据库一律存 <code>timestamptz</code>。解析和显示一律按 <code>Asia/Shanghai</code></td></tr>
+<tr><td>金额</td><td>整数，单位为"分"（<code>amount_cents</code>）。禁止用浮点数</td></tr>
+<tr><td>删除</td><td>只做软删除：写入 <code>deleted_at</code>。原话表禁止任何形式的删除</td></tr>
+<tr><td>分类</td><td>只增不改。旧分类停用时设 <code>is_active = false</code>。本人授权重分类时保留原始时段与修改版本</td></tr>
+<tr><td>密钥</td><td>全部放在环境变量里。仓库只提交 <code>.env.example</code></td></tr>
+<tr><td>日志</td><td>传话筒统一使用 <code>pino</code> 输出 JSON 日志，由 journald 收集。日志里不打印消息原文</td></tr>
+</table></div>
+
+<h3>4.2 模型与 Antigravity CLI 使用边界</h3>
+<p>v1.7 决策：子民明确要求微信调用已授权的官方 CLI，不使用 API Key。运行用户为 <code>lifeos</code>，模型为 <code>gemini-3.8-flash-low</code>。官方 FAQ 对个人订阅的应用封装支持边界仍有效；本决策不代表平台给予额外授权。</p>
+<ul>
+<li>调用官方 <code>agy -p</code>，使用参数数组，不经过 shell。不读取或复制 OAuth 凭据。</li>
+<li>工作区固定为 <code>/var/lib/lifeos/parser-workspace</code>。CLI 不接收数据库和微信密钥。</li>
+<li>仅接受裸 JSON 或完整 JSON 代码块，空响应单独分类；所有结果仍经原 schema 校验，不从解释中截取对象。</li>
+<li>同一时间只运行一个 CLI；JSON 格式错误附纠正提示补试一次，原始接收时间保持不变。超时或额度错误延期十分钟，累计五次停止。</li>
+<li>CLI 1.4.7 的复杂 <code>--json-schema</code> 实测返回空结果，当前把 schema 放入提示。CLI 输出先通过 zod，再提交事务。v1.8 在相同 Gemini 3.8 Flash 内改用 Low 档；七条真实样例通过，降低结构化提取的等待。模型不直接写库，也不生成回执。</li>
+<li>安装、账号授权、真实结构化解析和业务收发分别验收。未通过的项目写入部署记录。</li>
+</ul>
+
+<!-- ============================================================
+     5 · 数据模型
+     ============================================================ -->
+<h2 id="s5"><span class="no">5</span>数据模型</h2>
+<p class="aud">读者：员工、AI</p>
+<p>执行 SQL 的唯一真源是 <a href="../supabase/migrations/CLAUDE.md">迁移目录</a>，按文件名顺序执行。本文说明职责，不复制第二份建表脚本。</p>
+<div class="tbl"><table>
+<tr><th>表</th><th>职责</th><th>约束</th></tr>
+<tr><td><code>categories</code></td><td>本人的时间与收支分类</td><td>按 owner_id、kind、code 唯一；身份字段不可改，允许停用</td></tr>
+<tr><td><code>raw_inputs</code></td><td>原话、完整微信载荷、解析状态、租约与待发回执</td><td>按 owner_id、source、external_id 去重；原话和载荷不可改、不可删</td></tr>
+<tr><td><code>time_entries</code></td><td>起止时间、活动与整数分钟</td><td>按 raw_input_id、item_index 唯一；分类必须属于同一本人和时间种类</td></tr>
+<tr><td><code>transactions</code></td><td>收支、整数分、币种、账户和备注</td><td>按 raw_input_id、item_index 唯一；仅软删除</td></tr>
+<tr><td><code>local_records</code></td><td>本机账户、任务、任务组和项目</td><td>保留源编号；人工编辑校验版本</td></tr>
+<tr><td><code>local_archive</code></td><td>本机三库的完整原始行</td><td>保留源表与内容校验值；不可改写</td></tr>
+<tr><td><code>record_attachments</code></td><td>本机历史附件原始字节</td><td>不可改写；仅本人 AAL2 下载</td></tr>
+<tr><td><code>record_changes</code></td><td>人工编辑前后版本</td><td>与账目修改同一事务；不可改写</td></tr>
+<tr><td><code>dashboard_preferences</code></td><td>原版时间与财务设置</td><td>本人AAL2；按配置版本原子保存</td></tr>
+</table></div>
+<p>v1.8：分类复用本机活跃定义，保留关键词、收支方向和时间性质，已删除分类不导入。原有未分类 code 保持不变。睡眠与清醒休息分开判断，创作视频不按观看视频归类。</p>
+<p>2026-10-26分类返还：本人确定十一个大类，本次不创建细类。按当前修订导入，保留原始话语与时段。夜间和午睡均以WHOOP已评分实睡为准；手工睡眠的首尾差额记刷手机，归娱乐并标明推定。相同设备载荷重复同步不新增记录。睡眠卡片按醒来日期、时间轴按自然日统计。见 <code>时间分类与睡眠规则.md</code>。</p>
+<h3>5.1 事务与恢复</h3>
+<ul>
+<li><code>ingest_input</code> 幂等保存原话。<code>claim_next_input</code> 领取三分钟租约。</li>
+<li><code>apply_parse</code> 原子写入两本账并改变原话状态。失败全部回滚。</li>
+<li><code>run_command</code> 原子执行撤销、今天、帮助。同一指令重投不重复撤销。</li>
+<li>符合题型的短答关联原始追问；新活动和提问不被旧问题接管。“停止计时”直接封口，“取消追问”退出等待；原话始终保留。</li>
+<li>回执从已提交账目生成。回执持久化后由独立任务发送，模型等待不阻塞原话确认，失败最多重试五次。</li>
+</ul>
+<h3>5.2 权限与视图</h3>
+<ul>
+<li>匿名无权读写。本人 JWT 必须为 <code>aal2</code>。客户端底表只读；人工编辑通过限定字段的事务 RPC。</li>
+<li>前端不能读取微信 payload 或投递上下文。人工编辑通过 Worker 调用 <code>edit_record</code>，不开放解析和投递 RPC。</li>
+<li><code>service_role</code> 仅存 VPS 私有配置；原话不可变触发器仍然生效。</li>
+<li><code>v_daily_time</code> 按上海午夜拆分跨日净时长，保留扣减与进行中时段。<code>v_daily_money</code> 分币种汇总收支，排除转账。</li>
+<li><code>v_records</code> 统一时间、流水和本机辅助记录的分页查询；不暴露微信 payload。</li>
+<li>视图使用 <code>security_invoker</code> 继承底表 RLS。生产关闭公开注册。</li>
+</ul>
+<p>本机三库历史已一次性迁入；网页编辑写入云端，不建立旧版本机双向同步。后续 Whoop、录音与记忆表按阶段另写迁移。</p>
+
+<!-- ============================================================
+     6 · 组件规格
+     ============================================================ -->
+<h2 id="s6"><span class="no">6</span>组件规格</h2>
+<p class="aud">读者：员工、AI</p>
+
+<h3>6.1 传话筒（apps/relay）</h3>
+<p><code>main.ts</code> 组装通道、解析器与仓储。业务依赖 <code>contracts.ts</code> 接口。</p>
+<div class="tbl"><table>
+<tr><th>文件</th><th>职责</th></tr>
+<tr><td><code>src/channel/</code></td><td>iLink HTTP、本人消息识别和原子检查点；全批入库后推进游标</td></tr>
+<tr><td><code>src/parser/antigravity.ts</code></td><td>官方 agy 适配器；runner 限制环境、输出大小与超时，schema 校验结果</td></tr>
+<tr><td><code>src/store/supabase.ts</code></td><td>事务 RPC、账目快照与待发回执仓储</td></tr>
+<tr><td><code>src/processor.ts</code></td><td>指令识别、解析、追问与提交后回执恢复</td></tr>
+<tr><td><code>src/reply.ts</code></td><td>账目用数据库快照，问答用已持久化answer，纯存档才发固定确认</td></tr>
+<tr><td><code>src/worker.ts</code></td><td>串行领取与定时重试；独立任务投递回执</td></tr>
+<tr><td><code>src/main.ts</code></td><td>配置检查与组合入口；<code>--check</code> 不收发消息</td></tr>
+</table></div>
+<p>发送者必须匹配扫码会话保存的本人标识。数据库密钥不传给模型。微信文字属于数据，不作为 shell 命令执行。</p>
+
+<h3>6.2 解析契约（Parser 的输入和输出）</h3>
+<p>这是整个系统最关键的接口。<b>无论换成哪个模型，输入和输出都必须保持一致。</b></p>
+<p>常驻元提示词真源：<code>apps/relay/prompts/parse.md</code>。部署到工作区 <code>AGENTS.md</code>，启动检查逐字一致；每次调用同时注入同一规则。完整语义与工具落点见 <code>管家元提示词.md</code>。</p>
+<p>职责：保存每句话，直接回答普通问题与追问。模型输出受限计划，由 <code>apply_steward</code> 校验并持久化。明确要求执行上一轮活动时，可引用最近八轮中本人原话的钟点和活动；资金账户与金额仍只取当前原话及明确补充。不给模型数据库凭据。</p>
+<p>时钟冻结到 <code>received_at</code>。只给时长而无起止锚点时追问；分类不追问。资金账户必须存在并由原话或补充明确指定，支付渠道单独保存。普通支付不切换活动。仅记人民币；转账、精确纠错和历史范围查询走网页。</p>
+<p>输出 schema（<code>apps/relay/src/parser/schema.ts</code> 的权威版本）：</p>
+<pre><code>{
+  "time_entries": [
+    { "start_at": "2026-10-24T12:40:00+08:00",
+      "end_at":   "2026-10-24T14:00:00+08:00",
+      "category": "work_1",
+      "activity": "写方案" }
+  ],
+  "transactions": [
+    { "occurred_at": "2026-10-24T13:05:00+08:00",
+      "direction": "expense",
+      "amount_cents": 3800,
+      "currency": "CNY",
+      "category": "food",
+      "account": "wechat_pay",
+      "funding_account": "生活账户",
+      "merchant": null,
+      "note": "午饭" }
+  ],
+  "time_events": [],
+  "archive_kind": null,
+  "unsupported": null,
+  "clarify": null,
+  "answer": null
+}</code></pre>
+<p><code>time_events</code> 最多一个 <code>{action, at, category, activity, note}</code>。连续多个边界用闭合时段加最后一个switch。事务先在首段起点闭旧计时，再校验并写入；明确活动直接执行。stop按实际结束点封口，不因超过24小时拒绝；同分钟停止保留真实秒数。真实已结束记录冲突或网页并发变更仍回滚。</p>
+<p><code>archive_kind</code> 为 inspiration、diary、emotion 或 raw。标签写入 <code>raw_inputs.parse_result</code>，正文仍是不可变原话。云端尚未连接本机 Obsidian，不声称已写入任何笔记文件。<code>unsupported</code> 表示原话已保留，但操作尚需网页或后续接入。</p>
+<p>传话筒根据输出决定下一步：</p>
+<ul>
+<li>三个写入数组有内容 → 校验租约、账户和活动状态，在同一事务提交，从数据库快照回执。</li>
+<li><code>answer</code>有内容 → 持久化后发送自然回答，最多3000字；不能用“已存原话”替代回答。</li>
+<li><code>clarify</code> 有内容 → 三个数组为空且answer为null。补充原话独立保存，冻结原接收时间后重新解析。</li>
+<li>仅原话标签或未接入操作，且没有answer → 状态记为 <code>parsed</code>，说明存档位置和边界。</li>
+<li>90秒内同账户、金额、方向和事由重复 → 确认确为另一笔后才新增。重放同一 input_id 永不重复。</li>
+<li>撤销活动切换 → 软删新段并按修改版本恢复因果前驱。原话不删除；后续改动过的前驱不自动恢复。</li>
+</ul>
+
+<h3>6.3 网站（apps/web）</h3>
+<div class="tbl"><table>
+<tr><th>页面</th><th>内容</th><th>数据来源</th></tr>
+<tr><td>各页面登录门</td><td>密码 → 6位动态码</td><td>Supabase Auth</td></tr>
+<tr><td><code>/dashboard/time/day</code></td><td>原版日周时间轴、缩放、拖拽、双击编辑和补录</td><td><code>time_entries</code></td></tr>
+<tr><td><code>/dashboard/time/stats</code></td><td>原版范围统计、毛时间与纯时间切换</td><td>UTC锚点与原版时间投影</td></tr>
+<tr><td><code>/dashboard/fin/status</code></td><td>财务看板与侧栏区间月历；两次点击选起止日期，三页共享筛选</td><td><code>transactions</code>、账户和配置</td></tr>
+<tr><td><code>/dashboard/fin/ledger</code></td><td>原版流水、筛选、搜索、新增和编辑</td><td><code>transactions</code>、修改版本</td></tr>
+<tr><td><code>/dashboard/fin/flow</code></td><td>原版资金流图与交互明细</td><td>有效流水与主数据</td></tr>
+<tr><td><code>/dashboard/settings/*</code></td><td>LifeOS 全局外观、开发者与安全入口</td><td>本机偏好与本人会话</td></tr>
+<tr><td><code>/dashboard/time/settings/*</code></td><td>时间分类、项目、周起点与记录时区</td><td>本人配置事务</td></tr>
+<tr><td><code>/dashboard/fin/settings/*</code></td><td>财务主数据、导入、税务与仪表盘定制</td><td>本人配置事务</td></tr>
+<tr><td><code>/dashboard/records/settings/*</code></td><td>记录板块默认列表类型</td><td>本机记录偏好</td></tr>
+<tr><td><code>/dashboard/records</code></td><td>云端历史分页与任务、账户人工编辑</td><td><code>v_records</code></td></tr>
+<tr><td><code>/dashboard/inbox</code></td><td>微信原话与待澄清列表，补充沿用微信</td><td><code>raw_inputs</code>（source为wechat）</td></tr>
+</table></div>
+<p>v1.14：直接移植本机React组件、样式与交互，移除简化时间和财务页。原版API通过同源Worker适配，写入仍要求本人AAL2。旧入口自动跳转；记录时区保持北京时间。复原依据见<a href="./界面复原.md">界面复原</a>。</p>
+<p>网站只持有 <code>lifeos_web</code> publishable key。Pages Worker 使用本人会话；服务端拒绝非本人及非 AAL2 会话。会话令牌保存在 HttpOnly、Secure、SameSite=Strict Cookie 中。按用户最新授权，网站提供人工编辑接口；数据库再次检查本人 AAL2、字段白名单和版本号。每次编辑保存前后版本，原始来源不可改写。</p>
+
+<!-- ============================================================
+     7 · 安全设计
+     ============================================================ -->
+<h2 id="s7"><span class="no">7</span>安全设计</h2>
+<p class="aud">读者：员工、AI</p>
+<p>目标：公开登录页不含私人数据。只拿到密码时，服务端与数据库均拒绝读取记录。</p>
+
+<div class="tbl"><table>
+<tr><th>层</th><th>机制</th><th>挡住什么</th></tr>
+<tr><td>0 · 会话</td><td>Pages Worker：同源请求、HttpOnly Cookie、禁用私密响应缓存</td><td>跨站请求与令牌泄露</td></tr>
+<tr><td>1 · 密码</td><td>Supabase Auth 密码，至少 20 位，保存在密码管理器里</td><td>只拿到你设备的人</td></tr>
+<tr><td>2 · 动态码</td><td>Supabase 原生 TOTP MFA；RLS 要求会话等级为 <code>aal2</code></td><td>密码泄露</td></tr>
+<tr><td>3 · 本人边界</td><td>Worker 验证本人 ID；RLS 再次验证归属及 AAL2</td><td>越权读取</td></tr>
+</table></div>
+
+<h3>7.1 密钥存放</h3>
+<div class="tbl"><table>
+<tr><th>密钥</th><th>存放位置</th><th>说明</th></tr>
+<tr><td><code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>VPS：<code>/etc/lifeos/relay.env</code>（权限 600）</td><td>最高权限。只能放在这里</td></tr>
+<tr><td><code>SUPABASE_PUBLISHABLE_KEY</code></td><td>Cloudflare Pages 环境变量</td><td>公开也无妨，有 RLS 保护</td></tr>
+<tr><td>Antigravity CLI 登录凭证</td><td>VPS：<code>lifeos</code> 用户主目录下的官方凭据存储</td><td>本人通过官方 OAuth 登录；目录以安装版本为准，不输出凭据内容</td></tr>
+<tr><td>iLink 会话</td><td>VPS：传话筒的数据目录</td><td>子民扫码生成</td></tr>
+<tr><td>备份加密公钥</td><td>VPS</td><td>只能加密，不能解密</td></tr>
+<tr><td>备份解密私钥</td><td>子民离线保管（打印 + 密码管理器）</td><td>不放在任何服务器上</td></tr>
+</table></div>
+
+<h3>7.2 VPS 加固</h3>
+<ul>
+<li>新建专用用户 <code>lifeos</code>，传话筒只以这个用户运行。</li>
+<li>SSH 沿用已验证的 root 密钥入口。验证替代管理账号后再收紧权限，禁止直接关闭唯一运维入口。</li>
+<li>v1.1：VPS 已运行 x-ui，保留其监听端口与防火墙规则。传话筒只出站，不增加入站端口。</li>
+<li>开启系统安全自动更新。</li>
+</ul>
+
+<!-- ============================================================
+     8 · 施工路线与验收
+     ============================================================ -->
+<h2 id="s8"><span class="no">8</span>施工路线与验收</h2>
+<p class="aud">读者：员工</p>
+<p>每个阶段结束时都能独立使用。<b>上一阶段没有通过验收，就不开始下一阶段。</b></p>
+<p>v1.5 用户指定先探通微信绑定。安装 Node.js 22，生成二维码并保存本人会话；P0 其余项目继续保持待验收。扫码脚本不启动消息轮询、模型回复或账目写入。</p>
+<p>v1.6 修正扫码等待：对固定版本 SDK 应用校验补丁，仅将扫码状态长轮询设为 35 秒，超时继续等待同一二维码。二维码复制到本机图片展示，不公开服务端口。</p>
+<p>v1.7 复用已停用的 SuperNote 数据库。回收前完成数据库与附件的本机加密备份，替换旧表、账号与访问密钥。微信采用官方 CLI 解析，不使用 Google API Key。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 960 200" role="img" aria-label="施工路线图：P0 准备、P1 微信记账、P2 网站、P3 Whoop、P4 录音、P5 长期记忆，每个阶段之间有验收关口">
+  <style>
+    .ph{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+    .phk{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+    .pt{fill:var(--ink);font-size:14px;font-weight:700}
+    .ps{fill:var(--muted);font-size:12px}
+    .gt{fill:var(--ok)}
+    .gl{fill:var(--ok);font-size:11px;font-weight:600}
+    .rail{stroke:var(--line);stroke-width:3}
+  </style>
+  <line x1="20" y1="150" x2="940" y2="150" class="rail"/>
+  <rect x="20"  y="30" width="128" height="90" rx="10" class="ph"/>
+  <text x="34" y="58" class="pt">P0 准备</text><text x="34" y="80" class="ps">半天</text><text x="34" y="100" class="ps">账号与环境</text>
+  <rect x="176" y="30" width="148" height="90" rx="10" class="phk"/>
+  <text x="190" y="58" class="pt">P1 微信记账</text><text x="190" y="80" class="ps">约 1 周 · 核心</text><text x="190" y="100" class="ps">传话筒 + 数据库</text>
+  <rect x="352" y="30" width="148" height="90" rx="10" class="phk"/>
+  <text x="366" y="58" class="pt">P2 网站面板</text><text x="366" y="80" class="ps">约 1 周 · 核心</text><text x="366" y="100" class="ps">双重登录 + 面板</text>
+  <rect x="528" y="30" width="128" height="90" rx="10" class="ph"/>
+  <text x="542" y="58" class="pt">P3 Whoop</text><text x="542" y="80" class="ps">3–5 天</text><text x="542" y="100" class="ps">身体数据</text>
+  <rect x="684" y="30" width="128" height="90" rx="10" class="ph"/>
+  <text x="698" y="58" class="pt">P4 录音</text><text x="698" y="80" class="ps">1–2 周</text><text x="698" y="100" class="ps">转写 + 日报</text>
+  <rect x="840" y="30" width="100" height="90" rx="10" class="ph"/>
+  <text x="852" y="58" class="pt">P5 记忆</text><text x="852" y="80" class="ps">按需</text><text x="852" y="100" class="ps">MemOS</text>
+  <g>
+    <polygon points="162,140 172,150 162,160 152,150" class="gt"/><text x="140" y="178" class="gl">环境可用</text>
+    <polygon points="338,140 348,150 338,160 328,150" class="gt"/><text x="306" y="178" class="gl">连续 7 天无丢失</text>
+    <polygon points="514,140 524,150 514,160 504,150" class="gt"/><text x="482" y="178" class="gl">陌生访问被拦</text>
+    <polygon points="670,140 680,150 670,160 660,150" class="gt"/><text x="640" y="178" class="gl">数据每日同步</text>
+    <polygon points="826,140 836,150 826,160 816,150" class="gt"/><text x="794" y="178" class="gl">日报可读</text>
+  </g>
+</svg>
+<p class="cap">绿色菱形是验收关口。P1 和 P2 构成最小可用系统，其余阶段按需推进。</p>
+</div>
+
+<h3>P0 · 准备（半天）</h3>
+<ul class="check">
+<li>VPS：执行 <code>ops/install-antigravity.sh</code> 创建 <code>lifeos</code> 用户，安装官方 CLI。Node.js 22 LTS 供后续传话筒使用；保留已有 SSH 与 x-ui 服务（7.2 节）。</li>
+<li>VPS：<b>子民本人</b>完成 Antigravity CLI 登录，运行 <code>agy -p "只回复 ok，不调用工具。" --output-format json --print-timeout 60s</code>，验证 <code>status = SUCCESS</code>。</li>
+<li>Supabase：按用户授权复用 SuperNote-staging 新加坡项目；备份后清除旧数据；关闭新用户注册；创建子民的账号并开启 TOTP。</li>
+<li>代码仓库：按第 9 节的结构初始化，写好 L1 <code>CLAUDE.md</code>。</li>
+<li><b>子民提供</b>：时间分类表、金钱分类表、支付账户列表（第 10 节问题 2）。</li>
+</ul>
+<div class="gate">验收：VPS 上 lifeos 用户执行 <code>agy -p</code> 返回成功 JSON；传话筒 Node.js 环境可用；Supabase 本人账号及 TOTP 可用。安装 CLI 本身不代表 P0 完成。</div>
+
+<p>v1.8 备份施工：创建 LifeOS 专用私有 R2 桶。VPS 使用独立只读数据库账号，每日北京时间 02:00 导出一致性快照，经 age 公钥加密后上传。私钥仅留本机；保留三十天，并在隔离的本机 PostgreSQL 中恢复验证。失败十分钟后重试，两小时内最多三次。备份含 public、auth、storage 和迁移记录；若发现 Storage 实体而没有实体导出器，备份必须失败并报警。</p>
+<h3>P1 · 微信记账（约 1 周）</h3>
+<ul class="check">
+<li>已选定独立 SDK，评估见 <code>ops/CLAUDE.md</code>；建立 relay 模块时同步其模块地图。</li>
+<li>按顺序执行 migrations。分类导入只新增，按 owner_id、kind、code 去重，不改历史账目。</li>
+<li>实现 6.1 节的全部部件，并为 <code>parser</code> 写 20 条以上的样例测试（覆盖 2.2 节的所有句式）。</li>
+<li>编写 systemd 服务 <code>ops/lifeos-relay.service</code>，开机自启，崩溃后自动重启。</li>
+<li>子民扫码绑定微信机器人。</li>
+<li>编写 <code>ops/backup.py</code>、服务和定时器，并通过本机隔离恢复演练。</li>
+</ul>
+<div class="gate">验收：子民连续 7 天只用微信记录。① 没有任何消息丢失（原话条数 = 发送条数）；② 解析准确率不低于 95%；③ 撤销可用；④ 能从备份恢复出完整数据库。</div>
+
+<h3>P2 · 网站面板（约 1 周）</h3>
+<ul class="check">
+<li>按用户最新要求提前启动 P2；P1 连续七天验收继续进行。</li>
+<li>复用本机 LifeOS 布局、配色和图表。仅展示云端已入库记录。</li>
+<li>React 面板与 Worker 部署到本人 Cloudflare Pages，绑定 lifeos.zhaozimin.com。</li>
+<li>登录流程：密码 → TOTP。首次密码与验证器由本人设置。</li>
+<li>今日时间轴、时间统计、财务统计与原话收件箱共同复用只读接口。</li>
+<li>返回网页时自动刷新；收件箱只显示微信原话。</li>
+<li>23:30 小结已实现并安装，主动推送待本人确认启用。</li>
+<li>小结直接汇总账本，不调用模型。按上海日期去重，仅复用本人当天微信上下文；无上下文时跳过。</li>
+<li>分类累计与去重覆盖分别统计。不同币种分别汇总；空白至少五分钟，最多列出最长五段。</li>
+<li>用户已追加本机历史迁移与网页人工编辑。时间、流水、账户、项目、任务及附件保留来源，细节见 数据迁移与编辑.md。</li>
+<li>迁移使用三库快照，重复导入不覆盖人工修改。转账、负数、零金额、扣减及进行中时段保留原意。</li>
+<li>本次不增加 Access 或 Passkey。</li>
+</ul>
+<div class="gate">验收：① 未登录或仅密码登录时，数据接口拒绝访问；② 本人在手机上完成密码与 TOTP 登录，看到真实记录；③ 跨午夜、不同币种及空数据正确展示；④ 私人响应不被缓存。</div>
+
+<h3>P3 · Whoop（3–5 天）</h3>
+<ul class="check">
+<li>迁移已授权的本机WHOOP和SQLite，保留原版规则、图表和交互。只运行一个令牌刷新进程。</li>
+<li>沿用Node22和systemd，独立lifeos-whoop用户，仅监听回环。每30分钟同步最近14天，Webhook暂不启用。</li>
+<li>WHOOP为源，SQLite为工作库，Supabase为本人AAL2发布副本。令牌不进入发布表、浏览器或模型。</li>
+<li>侧边栏增加“健康”，统一入口 <code>/dashboard/health</code>。总览、趋势、建议、训练、感受和设置在页内切换。</li>
+<li>默认北京时间07:00发布、06:00准备。先同步，再等当天睡眠与恢复评分；未就绪每5分钟重试，不套用昨日训练。</li>
+<li>上午12点前通过现有微信回执队列每天发送一次计划；没有24小时内会话时等待，网页仍可查看。原23:30小结开关不变。</li>
+</ul>
+<p>副本表为whoop_records、whoop_publications、whoop_plans、whoop_jobs。页面操作进入白名单队列，报告保留修订。迁移与验收见 <code>健康接入.md</code>。</p>
+<div class="gate">验收：连续 3 天，Whoop App 里的数据都在 1 小时内出现在网站上。</div>
+
+<p>2026-10-26订阅接入：SubOS原版订阅、余额、支付工具和银行卡迁入VPS，统一入口为<code>/dashboard/subscriptions</code>。复用本人密码与TOTP，经过私有服务连接读取VPS唯一账本；本机旧地址改走SSH。订阅不自动生成财务流水或实际付款。每日加密备份见<code>订阅接入.md</code>。</p>
+<p>2026-10-28订阅提醒：本人要求在扣款前7天微信通知。VPS北京时间09至21点整点检查生效且自动续费的订阅，消息含预计金额和扣款日期。0026事务按订阅与续费日期去重，复用当前绑定和relay回执队列；浏览器通知保持独立。渠道确认后记送达，过期文案不跨日发送。运维见<code>../ops/subscription-reminders.md</code>。</p>
+<p>2026-10-28微信时间纠错：0027接通按日期、原起止时间、活动和当前/上一段选择记录。唯一候选经版本检查后原位修改，混合切换原子提交。日期区间短答续接原追问，撤销恢复修改前快照，后续版本冲突时保留新修改。原话、记录编号及WHOOP睡眠真源保持；回执显示修改前后。契约见<code>管家元提示词.md</code>。</p>
+<p>2026-10-28游客周视图入口：时间页标题旁常显“日视图／周视图”，与月历共用视图状态，侧栏收起和窄屏仍可切换。游客继续经匿名时间投影读取七天公开数据。</p>
+
+<h3>P4 · 录音（1–2 周）</h3>
+<ul class="check">
+<li>采购录音挂件（推荐 Omi，它提供实时转写 Webhook）。</li>
+<li>接收转写片段，写入 <code>transcripts</code>，不保存音频。</li>
+<li>每晚生成 <code>daily_digest</code>，并自动补全没有记录的时间段，交给子民确认。</li>
+</ul>
+<div class="gate">验收：日报内容和当天实际经历一致，由子民人工判断。</div>
+
+<h3>P5 · 长期记忆（按需）</h3>
+<ul class="check">
+<li>用户已选MemOS官方云，以relay代码集成接入。VPS不安装MemOS、Neo4j或Qdrant，回答继续使用官方agy。</li>
+<li>conversation_messages引用用户原话并保存每版回复，memory_jobs保存云任务。只确认已被渠道接受的回复；逐次HTTP事件另列后续。</li>
+<li>后台调用add/message并核查任务完成；回答前调用search/memory。固定用户、区分Agent与会话，保留原始时间和角色。</li>
+<li>云密钥仅放VPS；记忆故障不阻塞原话与账目。其他客户端后续通过MCP或CLI接入，分别验收采集范围。</li>
+<li>本机 LifeOS 通过 Supabase MCP 读取数据。</li>
+</ul>
+<p>本阶段已启用LifeOS微信云记忆，原话与回复档案随R2加密备份。只上传微信文字，不批量导出账本、WHOOP数据或OAuth载荷。其他AI客户端、对话专页与长期冷归档仍待完成。详见 <code>MemOS接入研究.md</code> 和 <code>ops/memory.md</code>。</p>
+
+<!-- ============================================================
+     9 · 给 AI 协作者的规则
+     ============================================================ -->
+<h2 id="s9"><span class="no">9</span>给 AI 协作者的规则</h2>
+<p class="aud">读者：AI 协作者。员工请把本节内容放进项目根目录的 <code>CLAUDE.md</code> 或 <code>AGENTS.md</code></p>
+
+<h3>9.1 代码库结构</h3>
+<pre><code>lifeos.zhaozimin/
+├── CLAUDE.md                 # L1：项目宪法、全局地图
+├── docs/
+│   ├── 行动方案.html          # 本文：唯一施工依据
+│   └── 部署记录.md            # 现场状态与阶段验收
+├── apps/
+│   ├── relay/                # 传话筒：微信 → 解析器 → Supabase
+│   │   ├── CLAUDE.md         # L2
+│   │   ├── prompts/parse.md  # 解析提示词（6.2 节）
+│   │   └── src/{channel,parser,store}/ …
+│   ├── web/                  # 网站面板：React + Pages Worker
+│   │   └── CLAUDE.md         # L2
+│   └── whoop/                # 身体同步、报告与云端发布
+│       └── CLAUDE.md         # L2
+├── supabase/
+│   ├── CLAUDE.md             # L2
+│   ├── migrations/           # 递增 SQL 版本
+│   └── test/                 # PostgreSQL 行为验收
+└── ops/
+    ├── CLAUDE.md             # L2
+    ├── install-antigravity.sh # 官方 CLI 安装入口
+    ├── antigravity.md        # SSH 授权与无界面验证
+    ├── lifeos-relay.service  # systemd
+    ├── backup.py             # 一致快照、age 加密与 R2 上传
+    └── verify-backup.py      # 本机隔离恢复</code></pre>
+
+<h3>9.2 必须做</h3>
+<ul class="must">
+<li>动手前，先读根目录 <code>CLAUDE.md</code> 和目标目录的 <code>CLAUDE.md</code>（GEB 三层文档协议）。</li>
+<li>每个源文件的头部都写 L3 契约注释：INPUT、OUTPUT、POS、PROTOCOL。</li>
+<li>增删文件后，更新所在目录的 L2 成员清单；增删模块后，更新 L1。</li>
+<li>修改 <code>Parser</code> 的输入或输出时，同步修改本文 6.2 节和 <code>schema.ts</code>，并补充对应的测试样例。</li>
+<li>修改表结构时，只能新增迁移文件，不能修改已执行过的迁移文件。</li>
+<li>金额用整数"分"，时间用 <code>timestamptz</code>，解析和显示按 <code>Asia/Shanghai</code>。</li>
+</ul>
+
+<h3>9.3 禁止做</h3>
+<ul class="never">
+<li>禁止删除或修改 <code>raw_inputs</code> 里的原话。</li>
+<li>禁止把 <code>service_role</code> 密钥写进网站代码、仓库或日志。</li>
+<li>禁止让 AI 直接写数据库。AI 只输出 JSON，由程序校验后写入。</li>
+<li>禁止让 AI 生成回执文字。回执由 <code>reply.ts</code> 根据数据拼接。</li>
+<li>禁止在传话筒里并发运行多个解析器 CLI 进程，禁止无间隔重试模型。</li>
+<li>禁止在本机和 VPS 上同时用同一个微信号接收 iLink 消息。</li>
+<li>禁止修改分类的 <code>code</code>。分类code只能新增，旧code不可改。本人授权重分类时保留原始数据与版本。</li>
+<li>禁止新增本文没有写到的外部服务。确实需要时，先改本文，经子民确认后再实施。</li>
+</ul>
+
+<h3>9.4 完成的定义</h3>
+<ol>
+<li>代码通过类型检查和测试。</li>
+<li>L3、L2、L1 文档和代码一致。</li>
+<li>本文中受影响的章节已经更新。</li>
+<li>满足本阶段的验收标准。</li>
+</ol>
+
+<!-- ============================================================
+     10 · 待确认问题与来源
+     ============================================================ -->
+<h2 id="s10"><span class="no">10</span>待确认问题与来源</h2>
+<p class="aud">读者：子民、员工</p>
+<div class="tbl"><table>
+<tr><th>#</th><th>问题</th><th>谁来回答</th><th>阻塞</th></tr>
+<tr><td>1</td><td>VPS规格与既有服务仅存私有运维记录；部署前核对资源并保留既有服务</td><td>已检查</td><td><span class="tag t-ok">已解决</span></td></tr>
+<tr><td>2</td><td>已导入本机活跃分类；具体数量仅存私有验收。支付渠道按原话提取，不推断为本机资金账户</td><td>已核对</td><td><span class="tag t-ok">已解决</span></td></tr>
+<tr><td>3</td><td>VPS 已成为当前微信入口；同一机器人不得启动第二个轮询器</td><td>已验证</td><td><span class="tag t-ok">已解决</span></td></tr>
+<tr><td>4</td><td><code>lifeos.zhaozimin.com</code> 已部署至本人 Cloudflare，域名和 SSL 已激活</td><td>已验证</td><td><span class="tag t-ok">已解决</span></td></tr>
+<tr><td>5</td><td>本人已设置密码并绑定 6 位 TOTP；正式域名双重登录已通过</td><td>已验证</td><td><span class="tag t-ok">已解决</span></td></tr>
+<tr><td>6</td><td>已决定：不使用 API Key，不自动切换付费 API；额度恢复后重试原话</td><td>子民</td><td><span class="tag t-blue">可选</span></td></tr>
+<tr><td>7</td><td>已决定：微信直接调用官方 agy CLI；使用独立项目资源，保持其他项目隔离</td><td>用户已明确</td><td><span class="tag t-ok">已解决</span></td></tr>
+</table></div>
+
+<h3>本地 UI 美化工作区</h3>
+<p>新实例部署：根目录 README.md 与 README.en.md 提供资源准备、27个迁移、本人账号和默认分类、CLI授权、微信二维码、常驻服务、私有连接与Pages发布步骤。WHOOP、MemOS和备份按需接入。当前采用手动部署；账号授权和设备绑定须由部署者完成。</p>
+<p>仓库分发：README提供中英文、统一Logo、宣传片与实现方法。生产配置、源站地址、资源编号和完整运行记录仅保留本机；品牌、公开网站及产品推广链接继续保留。Git历史同步清理，规则见 <code>docs/仓库发布与脱敏.md</code>。</p>
+<p>v1.27：按本人要求移除访客页面的登录入口，保留手动地址。新增内部认证限流、HTTPS转向和HSTS；升级ZIP依赖补丁。生产编号仅存私有部署记录。61项匿名检查未取得私人数据；服务器管理入口由部署者单独核验。详细范围和限制见 <code>docs/安全审计.md</code>。</p>
+<p>v1.26：访客复用原版财务三页、完整订阅卡片与品牌logo。金额、账号与私人备注固定打码；财务图表明确标为示意。健康六页只读展示，私人偏好与自述不公开。0025新增无金额财务投影。生产编号仅存私有部署记录。发布验收见部署记录及访客访问契约。</p>
+<p>v1.25：网站默认进入访客模式，无需账号。公开时间大类、时段、健康指标和脱敏订阅目录。财务金额、银行卡、订阅价格、账号、原话与备注继续私有。本人在 <code>/dashboard/login</code> 输入原密码及动态码后进入完整页面。公开数据只经固定归属的投影RPC读取，访客无写入权限。生产编号仅存私有部署记录。详细契约见 <code>docs/访客访问.md</code>。</p>
+<p>完整源码保留在当前项目。根目录执行 <code>npm run ui</code>，在 127.0.0.1:5173 使用合成数据预览主面板、健康与订阅。该模式不连接正式账本，不自动发布。编辑路径与交接提示词见 <code>docs/UI美化交接.md</code>。</p>
+<p>v1.24：源码已发布纸墨朱界面与三栏工作台。主站继续托管 Cloudflare Pages，生产编号仅存私有部署记录。VPS 同步健康、订阅静态页及源码，保留旧界面回退副本。构建、195 项检查与匿名门禁验证通过；本人重新登录后的真实数据页面验收待完成。</p>
+
+<h3>参考来源</h3>
+<ul style="font-size:14px">
+<li><a href="https://github.com/nextcaicai/WXLink">nextcaicai/WXLink</a>：基于 iLink 官方通道的微信接入实现，本文复用了它的通道</li>
+<li><a href="https://allclaw.org/blog/what-is-ilink-zh">什么是 iLink</a> · <a href="https://cdn.jsdelivr.net/gh/corespeed-io/wechatbot@main/README.md">corespeed-io/wechatbot</a></li>
+<li><a href="https://developer.whoop.com/docs/developing/oauth">WHOOP OAuth</a> · <a href="https://developer.whoop.com/docs/developing/webhooks/">WHOOP Webhooks</a></li>
+<li><a href="https://docs.omi.me/doc/developer/apps/Integrations">Omi 实时转写 Webhook</a></li>
+<li><a href="https://github.com/MemTensor/MemOS">MemTensor/MemOS</a></li>
+<li><a href="https://supabase.com/pricing">Supabase 定价与免费版限制</a></li>
+<li><a href="https://antigravity.google/download#antigravity-cli">Antigravity CLI 官方安装</a> · <a href="https://antigravity.google/docs/cli/headless/">无界面调用与 JSON 信封</a> · <a href="https://antigravity.google/docs/install/#remote-ssh-oauth-flow">SSH OAuth 授权</a> · <a href="https://antigravity.google/docs/faq">账号资格与个人订阅边界</a></li>
+</ul>
+
+<p class="meta" style="margin-top:40px">维护规则：修改本文时，把顶部的版本号加 1，并在对应章节写明变更。代码与本文不一致时，以本文为准，直到本文更新。</p>
+
+</main>
+</body>
+</html>
