@@ -204,7 +204,7 @@ li{margin:4px 0}
 <h3>2.6 注意</h3>
 <ul>
 <li>发语音时，请先用微信的"转文字"。系统只能读到微信转出来的文字。</li>
-<li>可以直接提问和追问。初始“收到，正在处理”是处理中确认，随后发送回答或账目回执；失败时说明原话保留并延期重试。</li>
+<li>可以直接提问和追问。初始“收到，正在处理”是处理中确认，随后发送回答或账目回执；失败时说明原话保留并延期重试。模型超时与上游不可用分别提示，中断的局部结果禁止入账。</li>
 <li>不要在消息里写别人的隐私信息，比如身份证号或病情。</li>
 </ul>
 
@@ -216,7 +216,7 @@ li{margin:4px 0}
 <p>系统由四个部件组成：<b>微信官方通道</b>、<b>VPS 上的传话筒</b>、<b>Supabase</b>、<b>网站</b>。传话筒只<b>主动向外</b>建立连接，所以 VPS 不需要开放任何对外端口。</p>
 
 <div class="diagram">
-<svg viewBox="0 0 960 430" role="img" aria-label="系统架构图：微信经 iLink 到 VPS 传话筒，传话筒调用解析器后写入 Supabase，解析器通过官方 Antigravity CLI 调用 Gemini 3.8，网站经 Cloudflare Pages 服务端与本人 AAL2 会话读取 Supabase">
+<svg viewBox="0 0 960 430" role="img" aria-label="系统架构图：微信经 iLink 到 VPS 传话筒，传话筒调用解析器后写入 Supabase，解析器通过官方 Antigravity CLI 调用 AGY_MODEL 指定的已验收模型，网站经 Cloudflare Pages 服务端与本人 AAL2 会话读取 Supabase">
   <defs>
     <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker>
   </defs>
@@ -251,7 +251,7 @@ li{margin:4px 0}
   <text x="444" y="130" class="s">写结构化记录 · 回执 · 定时任务</text>
   <rect x="428" y="176" width="264" height="80" rx="10" class="bx"/>
   <text x="444" y="204" class="t">Parser 解析器</text>
-  <text x="444" y="226" class="s">官方 agy · Gemini 3.8</text>
+  <text x="444" y="226" class="s">官方 agy · 模型可替换</text>
   <text x="444" y="244" class="s">只做一件事：原话 → JSON</text>
 
   <!-- Supabase -->
@@ -339,7 +339,7 @@ li{margin:4px 0}
 <tr><th>层</th><th>选择</th><th>理由</th></tr>
 <tr><td>消息入口</td><td>微信 iLink 通道；独立 SDK <code>@wechatbot/wechatbot@2.2.0</code></td><td>v1.5：选用 corespeed-io/wechatbot 的独立 SDK；腾讯插件依赖完整 OpenClaw。授权脚本位于 ops；生产轮询器位于 relay，先入库再存游标</td></tr>
 <tr><td>传话筒</td><td>Node.js 22 LTS + TypeScript，由 systemd 托管</td><td>和腾讯官方插件、网站用同一种语言</td></tr>
-<tr><td>解析器</td><td>官方 Antigravity CLI；Gemini 3.8 Flash</td><td>v1.7：用户明确选择微信直接调用已授权 CLI；不使用 API Key，不自动切换付费 API</td></tr>
+<tr><td>解析器</td><td>官方 Antigravity CLI；AGY_MODEL 指定模型</td><td>v1.7：用户明确选择微信直接调用已授权 CLI；不使用 API Key，不自动切换付费 API。切换前验证问答、记录、计时和纠错</td></tr>
 <tr><td>数据库</td><td>Supabase 免费版（Postgres）</td><td>复用已停用的 SuperNote-staging 新加坡项目；备份后清除旧数据，不新建收费资源</td></tr>
 <tr><td>网站</td><td>React + Vite + Pages Worker，部署在 Cloudflare Pages</td><td>免费，和 VPS 解耦。VPS 宕机时面板照常可看</td></tr>
 <tr><td>门禁</td><td>Supabase Auth 密码 + TOTP</td><td>服务端与 RLS 双重验证本人 AAL2 会话</td></tr>
@@ -364,7 +364,7 @@ li{margin:4px 0}
 <li>调用官方 <code>agy -p</code>，使用参数数组，不经过 shell。不读取或复制 OAuth 凭据。</li>
 <li>工作区固定为 <code>/var/lib/lifeos/parser-workspace</code>。CLI 不接收数据库和微信密钥。</li>
 <li>仅接受裸 JSON 或完整 JSON 代码块，空响应单独分类；所有结果仍经原 schema 校验，不从解释中截取对象。</li>
-<li>同一时间只运行一个 CLI；JSON 格式错误附纠正提示补试一次，原始接收时间保持不变。超时或额度错误延期十分钟，累计五次停止。</li>
+<li>同一时间只运行一个 CLI；模型单次等待180秒，进程上限195秒。JSON 格式错误附纠正提示补试一次，两次共用240秒预算，原始接收时间保持不变。超时或额度错误延期十分钟，累计五次停止并刷新最终失败回执。</li>
 <li>CLI 1.4.7 的复杂 <code>--json-schema</code> 实测返回空结果，当前把 schema 放入提示。CLI 输出先通过 zod，再提交事务。v1.8 在相同 Gemini 3.8 Flash 内改用 Low 档；七条真实样例通过，降低结构化提取的等待。模型不直接写库，也不生成回执。</li>
 <li>安装、账号授权、真实结构化解析和业务收发分别验收。未通过的项目写入部署记录。</li>
 </ul>
@@ -386,12 +386,16 @@ li{margin:4px 0}
 <tr><td><code>record_attachments</code></td><td>本机历史附件原始字节</td><td>不可改写；仅本人 AAL2 下载</td></tr>
 <tr><td><code>record_changes</code></td><td>人工编辑前后版本</td><td>与账目修改同一事务；不可改写</td></tr>
 <tr><td><code>dashboard_preferences</code></td><td>原版时间与财务设置</td><td>本人AAL2；按配置版本原子保存</td></tr>
+<tr><td><code>inspirations</code></td><td>灵感记录正文、短标题、总结与置顶状态</td><td>正文原文不改写；仅本人AAL2可读、受限RPC编辑并写审计，访客零暴露</td></tr>
+<tr><td><code>inspiration_tags</code> / <code>links</code></td><td>严格两层灵感标签（概念大类/具体分类）与多对多关联</td><td>数据库触发器封死第三层与斜杠，Agent自维护并支持网页新建/改名/移动/合并/归档</td></tr>
 </table></div>
 <p>v1.8：分类复用本机活跃定义，保留关键词、收支方向和时间性质，已删除分类不导入。原有未分类 code 保持不变。睡眠与清醒休息分开判断，创作视频不按观看视频归类。</p>
 <p>2026-10-26分类返还：本人确定十一个大类，本次不创建细类。按当前修订导入，保留原始话语与时段。夜间和午睡均以WHOOP已评分实睡为准；手工睡眠的首尾差额记刷手机，归娱乐并标明推定。相同设备载荷重复同步不新增记录。睡眠卡片按醒来日期、时间轴按自然日统计。见 <code>时间分类与睡眠规则.md</code>。</p>
+<p>2026-11-24过渡规则（0030）：紧邻WHOOP睡眠前后的1分钟至4小时有界短空白推定为刷手机（支持次日首条活动后到增量补齐，人工删除不复活）；跨整段睡眠的进行中生活自理在醒后尾段转为刷手机；未明示结束且超过10分钟的单纯如厕自动截断10分钟并补“休息·清醒休息”，睡前衔接WHOOP入睡时余量转刷手机，撤销保持因果一致。</p>
+<p>2026-11-24灵感记录（0031）：独立一级领域（<code>/inspirations</code> 与 <code>/inspirations/tags</code>），仅本人 AAL2 可见且零访客暴露；微信发送非时间/非消费的成段文字或明确要求记录时直存，正文一字不改保留原文，独立生成短标题、总结与严格两层标签（概念性大类 / 具体分类内容），支持网页增删改、置顶、标签治理与微信因果撤销。</p>
 <h3>5.1 事务与恢复</h3>
 <ul>
-<li><code>ingest_input</code> 幂等保存原话。<code>claim_next_input</code> 领取三分钟租约。</li>
+<li><code>ingest_input</code> 幂等保存原话。<code>claim_next_input</code> 为模型记录领取六分钟租约，控制指令沿用三分钟租约。</li>
 <li><code>apply_parse</code> 原子写入两本账并改变原话状态。失败全部回滚。</li>
 <li><code>run_command</code> 原子执行撤销、今天、帮助。同一指令重投不重复撤销。</li>
 <li>符合题型的短答关联原始追问；新活动和提问不被旧问题接管。“停止计时”直接封口，“取消追问”退出等待；原话始终保留。</li>
@@ -432,7 +436,7 @@ li{margin:4px 0}
 <p>这是整个系统最关键的接口。<b>无论换成哪个模型，输入和输出都必须保持一致。</b></p>
 <p>常驻元提示词真源：<code>apps/relay/prompts/parse.md</code>。部署到工作区 <code>AGENTS.md</code>，启动检查逐字一致；每次调用同时注入同一规则。完整语义与工具落点见 <code>管家元提示词.md</code>。</p>
 <p>职责：保存每句话，直接回答普通问题与追问。模型输出受限计划，由 <code>apply_steward</code> 校验并持久化。明确要求执行上一轮活动时，可引用最近八轮中本人原话的钟点和活动；资金账户与金额仍只取当前原话及明确补充。不给模型数据库凭据。</p>
-<p>时钟冻结到 <code>received_at</code>。只给时长而无起止锚点时追问；分类不追问。资金账户必须存在并由原话或补充明确指定，支付渠道单独保存。普通支付不切换活动。仅记人民币；转账、精确纠错和历史范围查询走网页。</p>
+<p>时钟冻结到 <code>received_at</code>。只给时长而无起止锚点时追问；分类不追问。资金账户必须存在并由原话或补充明确指定，支付渠道单独保存。普通支付不切换活动。仅记人民币；时间纠错和区间替换接微信，转账和历史范围查询走网页。</p>
 <p>输出 schema（<code>apps/relay/src/parser/schema.ts</code> 的权威版本）：</p>
 <pre><code>{
   "time_entries": [
@@ -622,6 +626,7 @@ li{margin:4px 0}
 <p>2026-10-26订阅接入：SubOS原版订阅、余额、支付工具和银行卡迁入VPS，统一入口为<code>/dashboard/subscriptions</code>。复用本人密码与TOTP，经过私有服务连接读取VPS唯一账本；本机旧地址改走SSH。订阅不自动生成财务流水或实际付款。每日加密备份见<code>订阅接入.md</code>。</p>
 <p>2026-10-28订阅提醒：本人要求在扣款前7天微信通知。VPS北京时间09至21点整点检查生效且自动续费的订阅，消息含预计金额和扣款日期。0026事务按订阅与续费日期去重，复用当前绑定和relay回执队列；浏览器通知保持独立。渠道确认后记送达，过期文案不跨日发送。运维见<code>../ops/subscription-reminders.md</code>。</p>
 <p>2026-10-28微信时间纠错：0027接通按日期、原起止时间、活动和当前/上一段选择记录。唯一候选经版本检查后原位修改，混合切换原子提交。日期区间短答续接原追问，撤销恢复修改前快照，后续版本冲突时保留新修改。原话、记录编号及WHOOP睡眠真源保持；回执显示修改前后。契约见<code>管家元提示词.md</code>。</p>
+<p>区间替换：0029按闭合区间裁剪相交记录，保留区间外活动、分类、备注、项目和标签。读取目标集合及版本后原子提交，创建与软删写审计。固定命令<code>修改时段 YYYY-MM-DD HH:MM-HH:MM 活动 [分类]</code>绕过模型，支持补录、局部替换和跨多段覆盖。撤销恢复原记录身份；后续修改冲突时保留新值。WHOOP评分睡眠和扣减位置不明的记录保持保护。</p>
 <p>2026-10-28游客周视图入口：时间页标题旁常显“日视图／周视图”，与月历共用视图状态，侧栏收起和窄屏仍可切换。游客继续经匿名时间投影读取七天公开数据。</p>
 
 <h3>P4 · 录音（1–2 周）</h3>

@@ -23,9 +23,17 @@ import {
 import { native } from "./native";
 import { dashboard } from "./data";
 import { records, recordDetail, editRecord, attachment } from "./records";
+import {
+  listInspirations,
+  createInspiration,
+  editInspiration,
+  deleteInspiration,
+  manageInspirationTag,
+} from "./inspirations";
 import { health } from './health';
 import {subscriptions} from './subscriptions';
 import {visitor} from './visitor';
+import {visitorInspirationsResponse,feedOptionsResponse} from './visitor-inspirations';
 import {guardLogin} from './login-guard';
 const security: Record<string, string> = {
   "Strict-Transport-Security": "max-age=31536000",
@@ -37,6 +45,11 @@ const security: Record<string, string> = {
   "Content-Security-Policy":
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com https://cdn.jsdelivr.net https://cdn.simpleicons.org https://*.mzstatic.com https://picx.zhimg.com https://d2u1z1lopyfwlx.cloudfront.net; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
 };
+const PUBLIC_FEED_PATHS = new Set([
+  "/inspirations/feed",
+  "/inspirations.json",
+  "/inspirations.md",
+]);
 async function body(request: Request, limit = 4096) {
   if (!request.headers.get("Content-Type")?.startsWith("application/json"))
     throw new HttpError(415, "请求格式无效");
@@ -58,6 +71,13 @@ export function createWorker(factory: ClientFactory = makeClient) {
         url.protocol='https:';
         return Response.redirect(url.toString(),308);
       }
+      if (
+        request.method === "OPTIONS" &&
+        (url.pathname === "/api/visitor/inspirations" ||
+          PUBLIC_FEED_PATHS.has(url.pathname))
+      ) {
+        return feedOptionsResponse();
+      }
       let ctx: AuthContext | undefined;
       const reply = (value: unknown, status = 200) => {
         const headers = new Headers({
@@ -72,12 +92,33 @@ export function createWorker(factory: ClientFactory = makeClient) {
         return new Response(JSON.stringify(value), { status, headers });
       };
       if (!url.pathname.startsWith("/api/")) {
-        const redirects: Record<string,string> = {"/":"/dashboard/time/day","/today":"/dashboard/time/day","/time":"/dashboard/time/stats","/money":"/dashboard/fin/status","/records":"/dashboard/records","/inbox":"/dashboard/inbox","/security":"/dashboard/security"};
-        if (redirects[url.pathname]) return Response.redirect(url.origin+redirects[url.pathname],302);
+        if (PUBLIC_FEED_PATHS.has(url.pathname)) {
+          if (request.method !== "GET") return reply({ error: "请求方法无效" }, 405);
+          if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY?.startsWith("sb_publishable_")) {
+            return reply({ error: "网站配置尚未完成" }, 503);
+          }
+          try {
+            const forced =
+              url.pathname === "/inspirations.json"
+                ? "json"
+                : url.pathname === "/inspirations.md"
+                  ? "md"
+                  : undefined;
+            return await visitorInspirationsResponse(factory(env), url, request, forced);
+          } catch (error) {
+            if (error instanceof HttpError) return reply({ error: error.message }, error.status);
+            return reply({ error: "灵感数据暂时不可用" }, 503);
+          }
+        }
+        const redirects: Record<string,string> = {"/":"/dashboard/time/day","/today":"/dashboard/time/day","/time":"/dashboard/time/stats","/money":"/dashboard/fin/status","/records":"/dashboard/records","/inbox":"/dashboard/inbox","/inspirations":"/dashboard/inspirations","/inspirations/tags":"/dashboard/inspirations/tags","/security":"/dashboard/security"};
+        if (redirects[url.pathname]) return Response.redirect(url.origin+redirects[url.pathname]+url.search,302);
         const response = await env.ASSETS.fetch(request),
           headers = new Headers(response.headers);
         for (const [name, value] of Object.entries(security))
           headers.set(name, value);
+        if (url.pathname === "/dashboard/inspirations") {
+          headers.set("X-Robots-Tag", "index, follow");
+        }
         if(url.pathname.startsWith('/health-console/')||url.pathname.startsWith('/subscriptions-console/')){
           headers.set('X-Frame-Options','SAMEORIGIN');
           headers.set('Content-Security-Policy',security['Content-Security-Policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'"));
@@ -104,8 +145,9 @@ export function createWorker(factory: ClientFactory = makeClient) {
         )
           throw new HttpError(503, "网站配置尚未完成");
         if(url.pathname.startsWith('/api/visitor/')){
-          const value=await visitor(factory(env),env,url,request.method,request.method==='POST'?await body(request,4096):undefined);
+          const value=await visitor(factory(env),env,url,request.method,request.method==='POST'?await body(request,4096):undefined,request);
           if(!(value instanceof Response))return reply(value);
+          if(url.pathname==='/api/visitor/inspirations')return value;
           return new Response(value.body,{status:value.status,headers:{...security,'Content-Type':value.headers.get('Content-Type')||'application/octet-stream','Cache-Control':'private, no-store',Vary:'Cookie'}});
         }
         await guardLogin(request,env);
@@ -132,6 +174,10 @@ export function createWorker(factory: ClientFactory = makeClient) {
         if (request.method === "GET" && url.pathname === "/api/dashboard") {
           await requireAal2(ctx, env);
           return reply(await dashboard(ctx.client, url));
+        }
+        if (request.method === "GET" && url.pathname === "/api/inspirations") {
+          await requireAal2(ctx, env);
+          return reply(await listInspirations(ctx.client, url));
         }
         if (
           request.method === "GET" &&
@@ -168,6 +214,30 @@ export function createWorker(factory: ClientFactory = makeClient) {
             await requireAal2(ctx, env);
             return reply(
               await editRecord(ctx.client, await body(request, 65536)),
+            );
+          }
+          if (url.pathname === "/api/inspirations/create") {
+            await requireAal2(ctx, env);
+            return reply(
+              await createInspiration(ctx.client, await body(request, 65536)),
+            );
+          }
+          if (url.pathname === "/api/inspirations/edit") {
+            await requireAal2(ctx, env);
+            return reply(
+              await editInspiration(ctx.client, await body(request, 65536)),
+            );
+          }
+          if (url.pathname === "/api/inspirations/delete") {
+            await requireAal2(ctx, env);
+            return reply(
+              await deleteInspiration(ctx.client, await body(request, 4096)),
+            );
+          }
+          if (url.pathname === "/api/inspirations/tags") {
+            await requireAal2(ctx, env);
+            return reply(
+              await manageInspirationTag(ctx.client, await body(request, 8192)),
             );
           }
           const input = await body(request);

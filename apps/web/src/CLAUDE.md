@@ -15,6 +15,12 @@ App.tsx: 默认访客与本人双重登录组合根；私有页面按角色挂�
 Auth.tsx: 密码、首次设置与 TOTP 表单。
 InboxView.tsx: 原话状态、待澄清与失败列表。
 model.ts: 云端契约及上海日期、整数金额和区间计算。
+inspiration-model.ts: 灵感记录、公开抓取订阅源与严格两层标签共享契约及上海自然日换算。
+InspirationsPage.tsx: 灵感记录双模式主列表页；本人可读写、访客只读可抓取，负责状态编排、JSON 数据岛与弹层调度。
+InspirationCard.tsx: 单条灵感的语义 HTML5 + Schema.org 原文展示卡片，附带 data-* 抓取属性。
+InspirationFilters.tsx: Agent 抓取入口条与按日/两层标签/关键词/来源筛选面板。
+InspirationTagsPage.tsx: 严格两层标签管理页；支持概念大类与具体分类的新建、改名、移动、合并与归档，仅本人 AAL2。
+InspirationEditorModal.tsx: 灵感新建与乐观锁编辑弹层；正文不自动改写，标签限制为两层。
 record-model.ts: 编辑契约、精确金额输入与上海墙钟转换。
 record-fields.ts: 按记录类型构建表单；只提交实际变化，保留未改时间精度。
 RecordsView.tsx: 历史分页与搜索；打开时采用记录偏好的默认类型，各类型共享编辑入口。

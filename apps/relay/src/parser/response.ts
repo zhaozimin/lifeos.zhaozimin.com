@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 官方 agy 的 JSON 信封与模型响应文本。
- * [OUTPUT]: 待 schema 校验的 JSON 值及明确的空响应错误。
- * [POS]: CLI 格式边界；只剥离完整 JSON 代码块，不从解释中截取对象。
+ * [OUTPUT]: 完整JSON值，或超时、上游不可用、额度及格式错误码。
+ * [POS]: CLI 完成状态与格式边界；中断输出禁止进入账目校验。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { RelayError } from '../errors.js';
@@ -11,7 +11,15 @@ export function decodeResponse(envelope: unknown): unknown {
     throw new RelayError('PARSER_JSON_INVALID');
   }
   const value = envelope as Record<string, unknown>;
-  if (value.status !== 'SUCCESS') throw new RelayError('PARSER_REQUEST_FAILED');
+  if (typeof value.error === 'string' && /\bIndividual quota reached\b|\bquota exhausted\b/i.test(value.error)) {
+    throw new RelayError('PARSER_QUOTA_EXHAUSTED');
+  }
+  if (typeof value.error === 'string' && /\bUNAVAILABLE\b|\bcode 503\b/i.test(value.error)) {
+    throw new RelayError('PARSER_UPSTREAM_UNAVAILABLE');
+  }
+  // CLI 超时仍能返回 SUCCESS；完整 JSON 也不能证明这一轮已完成。
+  if (value.finished_reason === 'print_timeout') throw new RelayError('PARSER_TIMEOUT');
+  if (value.status !== 'SUCCESS' || value.finished_reason) throw new RelayError('PARSER_REQUEST_FAILED');
   if (value.structured_output !== undefined && value.structured_output !== null) {
     return value.structured_output;
   }

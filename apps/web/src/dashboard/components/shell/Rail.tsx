@@ -51,7 +51,7 @@ export function Rail({
         <Search {...ICON} />
       </button>}
       <div className="my-2 h-px w-6 bg-[var(--zzm-hairline-2)]" aria-hidden />
-      {DOMAINS.map((domain) => <DomainLink key={domain.id} domain={domain} active={domain.id === current.id} />)}
+      {DOMAINS.filter((domain) => owner || !domain.ownerOnly).map((domain) => <DomainLink key={domain.id} domain={domain} active={domain.id === current.id} />)}
 
       <div className="mt-auto flex flex-col items-center gap-1">
         {canToggle && (
@@ -83,9 +83,10 @@ export function Rail({
 // 窄屏：领域与设置排成底部标签条，图标下常显名称；亮暗与退出在设置里
 export function TabBar({ current }: { current: Domain }) {
   const {owner}=useAccess();
+  const visibleDomains = DOMAINS.filter((domain) => owner || !domain.ownerOnly);
   return (
     <nav aria-label="系统" className="safe-bottom flex flex-none items-stretch justify-around border-t border-[var(--zzm-hairline)] bg-background md:hidden">
-      {[...DOMAINS, ...(owner?[SETTINGS_DOMAIN]:[])].map((domain) => (
+      {[...visibleDomains, ...(owner?[SETTINGS_DOMAIN]:[])].map((domain) => (
         <Link
           key={domain.id}
           to={domain.home}
@@ -93,7 +94,7 @@ export function TabBar({ current }: { current: Domain }) {
           className="flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-[10.5px] leading-4 text-zzm-muted aria-[current=page]:font-semibold aria-[current=page]:text-foreground"
         >
           <domain.icon size={18} strokeWidth={1.5} />
-          {domain.label}
+          {domain.shortLabel ?? domain.label}
         </Link>
       ))}
     </nav>

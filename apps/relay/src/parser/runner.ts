@@ -1,13 +1,16 @@
 /**
  * [INPUT]: 官方 agy 可执行文件、可信提示、JSON Schema 与私有工作区。
- * [OUTPUT]: 有界的 CLI JSON 信封；schema 放入提示，超时终止进程组。
- * [POS]: CLI 进程边界；使用参数数组，不经过 shell，不传递数据库密钥。
+ * [OUTPUT]: CLI信封、密钥白名单和共享超时预算常量。
+ * [POS]: CLI进程边界；完成等待与进程回收分开计时，隔离数据库密钥。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { spawn } from 'node:child_process';
 import { RelayError } from '../errors.js';
 
 export interface RunnerOptions { binary: string; model: string; workspace: string; timeoutMs?: number }
+export const AGY_PROCESS_TIMEOUT_MS = 195_000;
+export const PARSER_TOTAL_BUDGET_MS = 240_000;
+const SHUTDOWN_GRACE_MS = 15_000;
 export function cliEnvironment(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const allowed = new Set(['HOME', 'PATH', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LC_ALL',
     'TZ', 'TMPDIR', 'TERM', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME']);
@@ -16,11 +19,13 @@ export function cliEnvironment(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 
 export async function runAgy(options: RunnerOptions, prompt: string, schema: unknown): Promise<unknown> {
   return new Promise((resolve, reject) => {
+    const timeoutMs = options.timeoutMs ?? AGY_PROCESS_TIMEOUT_MS;
+    const printTimeoutMs = Math.max(1, timeoutMs - SHUTDOWN_GRACE_MS);
     // CLI 1.4.7 的复杂 --json-schema 实测返回空结果，使用提示约束与本地强校验。
     const constrainedPrompt = `${prompt}\n\n输出必须符合此 JSON Schema，只输出一个 JSON 对象：\n${JSON.stringify(schema)}`;
     const child = spawn(options.binary, ['-p', constrainedPrompt, '--model', options.model,
       '--output-format', 'json',
-      '--disable-slash-commands', '--print-timeout', '60s'], {
+      '--disable-slash-commands', '--print-timeout', `${printTimeoutMs}ms`], {
       cwd: options.workspace, env: cliEnvironment(process.env), shell: false,
       detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -41,7 +46,7 @@ export async function runAgy(options: RunnerOptions, prompt: string, schema: unk
       forcedKill = setTimeout(() => kill('SIGKILL'), 5_000);
       forcedKill.unref();
     };
-    const timeout = setTimeout(() => terminate('PARSER_TIMEOUT'), options.timeoutMs ?? 75_000);
+    const timeout = setTimeout(() => terminate('PARSER_TIMEOUT'), timeoutMs);
     child.stdout.on('data', (chunk: Buffer) => {
       size += chunk.length;
       if (size > 2 * 1024 * 1024) terminate('PARSER_OUTPUT_TOO_LARGE');
@@ -57,9 +62,17 @@ export async function runAgy(options: RunnerOptions, prompt: string, schema: unk
       clearTimeout(timeout);
       if (forcedKill) clearTimeout(forcedKill);
       if (failure) return reject(failure);
-      if (code !== 0) return reject(new RelayError('PARSER_REQUEST_FAILED'));
-      try { resolve(JSON.parse(stdout)); }
-      catch { reject(new RelayError('PARSER_JSON_INVALID')); }
+      try {
+        const envelope: unknown = JSON.parse(stdout);
+        if (code !== 0) {
+          // CLI的503会同时返回非零退出码与JSON错误；禁止丢掉错误信封。
+          if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) {
+            return reject(new RelayError('PARSER_REQUEST_FAILED'));
+          }
+          return resolve({ ...envelope, status: 'ERROR' });
+        }
+        resolve(envelope);
+      } catch { reject(new RelayError(code !== 0 ? 'PARSER_REQUEST_FAILED' : 'PARSER_JSON_INVALID')); }
     });
   });
 }

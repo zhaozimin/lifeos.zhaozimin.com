@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 原话状态机、仓储替身和合成账目。
- * [OUTPUT]: 确定性停止取消、对话恢复、延期与账目回执证据。
+ * [OUTPUT]: 控制指令、对话恢复、故障回执与脱敏日志证据。
  * [POS]: 应用业务验收；数据库事务另由 PostgreSQL 集成测试验证。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Parser, RawInput, Store } from '../src/contracts.js';
 import {matchCommand} from '../src/contracts.js';
-import { processNext } from '../src/processor.js';
+import { processNext, recoverReceipt } from '../src/processor.js';
 import { money } from '../src/reply.js';
 import { RelayError } from '../src/errors.js';
 import { runWorker } from '../src/worker.js';
@@ -24,7 +24,7 @@ function setup(input = raw) {
     context: async () => ({ accounts: [], ongoing: [] }),
     dialogue: async () => [],
     apply: async () => { events.push('commit'); return { ...input, status: 'parsed' }; },
-    fail: async (_: RawInput, code: string) => { events.push(code); return { ...input, status: 'failed' }; },
+    fail: async (_: RawInput, code: string) => { events.push(code); return { ...input, status: 'failed', error_code: code }; },
     command: async (_: RawInput, value: string) => { command = value; return { ...input, status: 'parsed', parse_result: { command: value } }; },
     records: async () => { events.push('snapshot'); return { time_entries: [], transactions: [{
       occurred_at: raw.received_at, direction: 'expense', amount_cents: 3800, currency: 'CNY',
@@ -45,6 +45,40 @@ test('额度错误只延期，回执明确已存原话', async () => {
   const state = setup();
   await processNext(state.store, { enabled: true, parse: async () => { throw new RelayError('PARSER_REQUEST_FAILED'); } });
   assert.deepEqual(state.events, ['PARSER_REQUEST_FAILED', 'receipt']); assert.match(state.receipt, /原话已保留.*重试/);
+});
+test('模型超时和上游不可用明确回执，日志只暴露输入编号与错误码', async () => {
+  for (const [code, message] of [['PARSER_TIMEOUT', 'AI 服务响应超时'],
+    ['PARSER_UPSTREAM_UNAVAILABLE', 'AI 服务暂时不可用']] as const) {
+    const state = setup();
+    const logs: Record<string, unknown>[] = [];
+    const logger = pino({ level: 'warn' }, { write: line => { logs.push(JSON.parse(line)); } });
+    await processNext(state.store, { enabled: true, parse: async () => {
+      throw new RelayError(code);
+    } }, undefined, logger);
+    assert.deepEqual(state.events, [code, 'receipt']);
+    assert.ok(state.receipt.includes(message));
+    assert.match(state.receipt, /原话已保留.*重试/);
+    assert.equal(logs[0]?.event, 'input_processing_failed');
+    assert.equal(logs[0]?.input_id, raw.id);
+    assert.equal(logs[0]?.code, code);
+    assert.ok(!JSON.stringify(logs).includes(raw.text));
+  }
+});
+test('额度耗尽不承诺短时恢复，达到五次上限不再承诺自动重试', async () => {
+  const exhausted = setup({ ...raw, status: 'failed', error_code: 'PARSER_QUOTA_EXHAUSTED', attempts: 1 });
+  await recoverReceipt(exhausted.store, await exhausted.store.claim(true) as RawInput);
+  assert.match(exhausted.receipt, /额度已用完.*额度恢复/);
+  assert.doesNotMatch(exhausted.receipt, /稍后会重试/);
+  const stopped = setup({ ...raw, status: 'failed', error_code: 'PARSER_TIMEOUT', attempts: 5 });
+  await recoverReceipt(stopped.store, await stopped.store.claim(true) as RawInput);
+  assert.match(stopped.receipt, /已达到重试上限/);
+  assert.doesNotMatch(stopped.receipt, /稍后会重试/);
+});
+test('重启后领取五次失败消息只恢复最终回执，不再次调用模型', async () => {
+  const state = setup({ ...raw, status: 'failed', error_code: 'PARSER_TIMEOUT', attempts: 5 });
+  await processNext(state.store, { enabled: true, parse: async () => { throw Error('must not call model'); } });
+  assert.deepEqual(state.events, ['receipt']);
+  assert.match(state.receipt, /已达到重试上限/);
 });
 test('已提交但未生成回执时只恢复回执，不再调用模型', async () => {
   const state = setup({ ...raw, status: 'parsed' });

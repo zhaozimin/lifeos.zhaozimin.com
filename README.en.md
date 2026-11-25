@@ -37,8 +37,9 @@ Created with [huashu-motion](https://github.com/alchaincyf/huashu-motion).
 
 | Module | Capabilities |
 |---|---|
-| WeChat steward | Activity and expense capture, conversation, follow-up context and time-range corrections |
-| Time | Daily and weekly timelines, activity switching, category statistics and editing |
+| WeChat steward | Activity, expense and inspiration capture, conversation, follow-up context, time-range corrections and interval replacements |
+| Time | Daily and weekly timelines, activity switching, category statistics, WHOOP sleep transitions, 10-min restroom cap and editing |
+| Inspirations | Verbatim capture with independent AI title, summary and strict two-level tags; public crawlable HTML / Markdown / JSON feeds for daily Agent summarization |
 | Finance | Transactions, financial overview, cash flow and chart drill-down |
 | Subscriptions | Brand cards, renewal statistics, browser notifications and optional seven-day WeChat reminders |
 | Health | WHOOP metrics, trends, workouts and daily exercise guidance |
@@ -178,7 +179,7 @@ supabase db push --include-all --dry-run
 supabase db push --include-all
 ```
 
-Check that the dry run targets your empty project. There are currently 27 migrations, `0001` through `0027`. Do not run `db reset` against an existing production database. Alternatively, apply every SQL file in order in SQL Editor and maintain matching migration history to prevent duplicate application. [CLI reference](https://supabase.com/docs/reference/cli/supabase-db-push)
+Check that the dry run targets your empty project. There are currently 32 migrations, `0001` through `0032`. Do not run `db reset` against an existing production database. Alternatively, apply every SQL file in order in SQL Editor and maintain matching migration history to prevent duplicate application. [CLI reference](https://supabase.com/docs/reference/cli/supabase-db-push)
 
 Under **Authentication → Users**, manually create your owner email/password account, confirm its email state and save its UUID. Disable public signup and enable TOTP. The local `supabase/config.toml` does not automatically change hosted Auth settings. Use a password of at least 20 characters from initialization.
 
@@ -222,8 +223,8 @@ begin
     (v_owner,'money','living','生活消费','expense'),
     (v_owner,'money','income','收入','income')
     on conflict(owner_id,kind,code) do nothing;
-  insert into public.visitor_settings(id,owner_id,enabled,share_activity_titles)
-    values(1,v_owner,false,false) on conflict(id) do nothing;
+  insert into public.visitor_settings(id,owner_id,enabled,share_activity_titles,share_inspirations)
+    values(1,v_owner,false,false,false) on conflict(id) do nothing;
 end;
 $$;
 ```
@@ -385,17 +386,18 @@ Manually open `/dashboard/login` on **your own website**. Use the step 2 credent
 
 Review time categories and create your own payment accounts, categories and budgets in finance settings before recording expenses. Do not copy the author's real accounts or balances.
 
-Public guest access starts disabled. After reviewing what you want to publish, run the SQL below in SQL Editor; keep original activity titles hidden. Set `enabled=false` to close public access again.
+Public guest access starts disabled. After reviewing what you want to publish, run the SQL below in SQL Editor; keep original activity titles hidden. To expose Inspirations publicly and allow external pages or Agents to crawl daily entries (`/inspirations/feed`, `/inspirations.md`, `/inspirations.json`, all supporting `?date=today` or `?date=YYYY-MM-DD`), set `share_inspirations=true`. Set `enabled=false` to close public access again.
 
 ```sql
 update public.visitor_settings
-set enabled=true, share_activity_titles=false
+set enabled=true, share_activity_titles=false, share_inspirations=false
 where id=1 and owner_id='REPLACE_WITH_OWNER_UUID'::uuid;
 ```
 
 Acceptance checks:
 
 - Send “帮助” in WeChat, describe what you are actually doing, then send “停止计时”; compare the replies and website.
+- Send a paragraph of thoughts or “帮我记一下……” in WeChat; verify the Inspirations page preserves the verbatim content with generated title, summary and two-level tags.
 - With parsing disabled, expect an explicit original-message receipt, not working AI conversation.
 - Private `/api/dashboard` should return 401 without login and 403 with password-only access before TOTP.
 - Use a signed-out browser to verify the public scope. Money and accounts must remain masked; guest writes, sync and private downloads must be denied.
@@ -442,7 +444,7 @@ Run `bash /opt/lifeos/ops/install-backup-tools.sh` on Ubuntu 24.04 x86_64 to ins
 
 ### 11. Optionally enable seven-day WeChat subscription reminders
 
-After the subscription service, WeChat binding, relay and all 27 migrations are ready, run in the **VPS root terminal**:
+After the subscription service, WeChat binding, relay and all 32 migrations are ready, run in the **VPS root terminal**:
 
 ```sh
 install -m 0644 /opt/lifeos/ops/lifeos-subscription-reminders.service /etc/systemd/system/
@@ -461,7 +463,7 @@ The job checks hourly from 09:00 through 21:00 Asia/Shanghai for automatic renew
 | Symptom | Check first |
 |---|---|
 | Installer digest changed | Review the upstream installer or archive; do not remove verification |
-| Doctor cannot find owner or fallback categories | All 27 migrations, Auth UUID, bootstrap SQL and matching relay configuration |
+| Doctor cannot find owner or fallback categories | All 32 migrations, Auth UUID, bootstrap SQL and matching relay configuration |
 | QR code is missing or expired | Retrieve the newest PNG, keep the login process running and confirm on the phone |
 | QR binding succeeds but no replies arrive | Running relay, duplicate receivers and disabled parser |
 | Google login works but the model fails | Available model, eligibility, quota and SSH authorization |

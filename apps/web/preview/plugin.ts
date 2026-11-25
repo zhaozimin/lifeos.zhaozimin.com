@@ -14,6 +14,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {demoDatabase} from './database';
+import {demoInspirations} from './inspirations';
 import {native} from '../worker/native';
 import {records,recordDetail,editRecord} from '../worker/records';
 import {dashboard} from '../worker/data';
@@ -27,7 +28,7 @@ const mime:Record<string,string>={'.js':'text/javascript','.css':'text/css','.sv
 async function body(req:IncomingMessage){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>2e6)throw Object.assign(new Error('演示请求过大'),{status:413});}return raw?JSON.parse(raw):{};}
 function json(res:ServerResponse,data:unknown,status=200){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
 export function uiPreview():Plugin{
-  const {client}=demoDatabase(),health=demoHealth();
+  const {client}=demoDatabase(),health=demoHealth(),inspirations=demoInspirations();
   return {name:'lifeos-ui-preview',apply:'serve',
     transformIndexHtml(html){const label=existsSync(fileURLToPath(new URL('../.private/subos-preview.sqlite3',import.meta.url)))?'合成数据 · 订阅为本机快照':'合成数据';return html.replace('</body>',`<div style="position:fixed;bottom:6px;right:12px;z-index:99999;background:#172b20;color:white;border-radius:8px;padding:5px 10px;font:12px system-ui;pointer-events:none">本地UI演示 · ${label}</div></body>`);},
     async configureServer(server){
@@ -69,6 +70,9 @@ export function uiPreview():Plugin{
         if(req.headers.origin&&!['http://127.0.0.1:5173','http://localhost:5173'].includes(req.headers.origin)){json(res,{message:'预览拒绝其他页面来源'},403);return;}
         try{
           if(/(?:^|\/)(?:\.private|\.wrangler|\.dev\.vars[^/]*)(?:\/|$)/.test(decodeURIComponent(url.pathname))){json(res,{message:'私有文件不属于UI预览'},403);return;}
+          if(url.pathname==='/inspirations/feed'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(inspirations.renderHtml(url));return;}
+          if(url.pathname==='/inspirations.md'){res.writeHead(200,{'Content-Type':'text/markdown; charset=utf-8','Cache-Control':'no-store'});res.end(inspirations.renderMarkdown(url));return;}
+          if(url.pathname==='/inspirations.json'){json(res,inspirations.publicFeed(url));return;}
           const asset=url.pathname.startsWith('/health-console/')?[healthRoot,url.pathname.slice(16)]:
             url.pathname.startsWith('/subscriptions-console/')?[subsRoot,url.pathname.slice(23)]:null;
           if(asset){const file=path.resolve(asset[0],decodeURIComponent(asset[1]));
@@ -91,6 +95,12 @@ export function uiPreview():Plugin{
           if(url.pathname==='/api/records'){json(res,await records(client,url));return;}
           if(url.pathname==='/api/record'){json(res,await recordDetail(client,url));return;}
           if(url.pathname==='/api/records/edit'){json(res,await editRecord(client,input));return;}
+          if(url.pathname==='/api/inspirations'&&req.method==='GET'){json(res,inspirations.list(url));return;}
+          if(url.pathname==='/api/visitor/inspirations'&&req.method==='GET'){json(res,inspirations.publicFeed(url));return;}
+          if(url.pathname==='/api/inspirations/create'&&req.method==='POST'){json(res,inspirations.create(input));return;}
+          if(url.pathname==='/api/inspirations/edit'&&req.method==='POST'){json(res,inspirations.edit(input));return;}
+          if(url.pathname==='/api/inspirations/delete'&&req.method==='POST'){json(res,inspirations.remove(input));return;}
+          if(url.pathname==='/api/inspirations/tags'&&req.method==='POST'){json(res,inspirations.manageTag(input));return;}
           json(res,{message:'该动作未纳入UI演示，请使用正式站。'},422);
         }catch(error){const e=error as {status?:number;message?:string;code?:string};json(res,{message:e.code==='ENOENT'?'资源不存在':e.message||'演示请求失败'},e.code==='ENOENT'?404:e.status||422);}
       });

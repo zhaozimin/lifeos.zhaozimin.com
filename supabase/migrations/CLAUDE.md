@@ -32,5 +32,10 @@
 0025_visitor_finance.sql: 公开财务日期、方向和通用分类；不选择金额、账户或原始标题。
 0026_subscription_reminders.sql: 订阅七天提醒；按续费日期去重、隔离当前微信绑定，并设置当日回执期限。
 0027_wechat_time_corrections.sql: 微信时间纠错；唯一候选、版本检查、混合事务、短答续接和冲突保护撤销。
+0028_parser_wait_budget.sql: 慢响应预算；模型租约延长至六分钟，五次失败刷新最终回执。
+0029_time_replacements.sql: 区间替换；裁剪重叠、保留外侧、版本比较、原子审计和因果撤销。
+0030_whoop_sleep_transitions.sql: 睡眠过渡与如厕封顶；邻近短空白补刷手机、跨夜生活自理醒后转手机、未结如厕超10分转休息。
+0031_inspirations.sql: 灵感记录独立领域与严格两层标签系统；原话正文不改写、独立标题总结、AAL2读写与微信双保险提交。
+0032_visitor_inspirations.sql: 灵感公开可抓取投影；visitor_settings 新增 share_inspirations 开关（默认 false），提供按上海自然日与两层标签筛选的零私密字段只读 RPC。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

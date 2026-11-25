@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 构建后的relay、官方agy与隔离规则工作区。
+ * [INPUT]: 已构建relay、官方agy、AGY_MODEL与隔离规则工作区。
  * [OUTPUT]: 时间纠错、混合切换和普通补录的真实模型路由证据。
  * [POS]: 上线语义探针；使用合成内容，不连接数据库、微信或MemOS。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -9,7 +9,7 @@ import {AntigravityParser} from '../apps/relay/dist/src/parser/antigravity.js';
 import {verifyWorkspaceRules} from '../apps/relay/dist/src/parser/rules.js';
 const workspace=process.env.AGY_WORKSPACE;assert.ok(workspace);await verifyWorkspaceRules(workspace);
 const parser=new AntigravityParser(true,{binary:'/home/lifeos/.local/bin/agy',
-  model:'gemini-3.8-flash-low',workspace});
+  model:process.env.AGY_MODEL??'gemini-3.8-flash-low',workspace});
 const stamp=time=>`2026-10-28T${time}:00+08:00`;
 const categories=[['work','工作'],['rest','清醒休息'],['food','饮食'],['learn','学习成长'],['uncategorized','待确认']]
   .map(([code,name],index)=>({id:index+1,code,name,kind:'time',is_active:true}));

@@ -23,6 +23,8 @@ import { LedgerPage } from "./dashboard/fin/pages/LedgerPage";
 import { FlowPage } from "./dashboard/fin/pages/FlowPage";
 import { SettingsHub } from "./dashboard/settings/SettingsHub";
 import { CloudRecords, CloudInbox, CloudSecurity } from "./CloudPages";
+import { InspirationsPage } from "./InspirationsPage";
+import { InspirationTagsPage } from "./InspirationTagsPage";
 import { HealthPage } from './HealthPage';
 import {SubscriptionsPage} from './SubscriptionsPage';
 export default function App() {
@@ -65,7 +67,7 @@ export default function App() {
   }, [load]);
   const owner=session?.stage==='ready';
   configureAccess(owner);
-  const privatePage=(page:React.ReactNode)=>owner?page:<VisitorRestricted/>;
+  const privatePage=(page:React.ReactNode,title?:string)=>owner?page:<VisitorRestricted title={title}/>;
   return (
     <ThemeProvider>
       <ErrorBoundary label="LifeOS">
@@ -118,6 +120,8 @@ export default function App() {
                 <Route path="settings/:panelId" element={privatePage(<SettingsHub />)} />
                 {/* 旧设计系统活文档已由 ui.zhaozimin.com 取代 */}
                 <Route path="settings/design/*" element={<Navigate to="/settings/developer" replace />} />
+                <Route path="inspirations" element={<InspirationsPage api={api} />} />
+                <Route path="inspirations/tags" element={privatePage(<InspirationTagsPage api={api} />, "灵感标签管理仅本人可见")} />
                 <Route path="records" element={privatePage(<CloudRecords api={api} />)} />
                 <Route path="records/settings" element={<Navigate to="/records/settings/list" replace />} />
                 <Route path="records/settings/:panelId" element={privatePage(<SettingsHub />)} />

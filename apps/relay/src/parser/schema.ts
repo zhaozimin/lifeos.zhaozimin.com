@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 模型计划、当前分类与真实资金账户上下文。
- * [OUTPUT]: 管家计划、受限时间纠错和自然回答校验器。
+ * [OUTPUT]: 管家计划、时间纠错、区间替换和自然回答校验器。
  * [POS]: 模型与账本之间的唯一结构化边界。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -10,11 +10,21 @@ import { RelayError } from '../errors.js';
 
 const timestamp = z.iso.datetime({ offset: true });
 const optionalText = z.string().max(500).nullable();
+const tagSegment = z.string().trim().min(1).max(40).refine((v) => !v.includes('/'));
+const inspirationTag = z.object({ group: tagSegment, name: tagSegment }).strict();
+const inspirationRecord = z.object({
+  title: z.string().trim().min(1).max(120).nullable().optional(),
+  summary: z.string().trim().min(1).max(500).nullable().optional(),
+  content: z.string().min(1).max(10000).refine((v) => v.trim().length > 0),
+  tags: z.array(inspirationTag).max(8).optional(),
+}).strict();
+const timeRecord = z.object({
+  start_at: timestamp, end_at: timestamp, category: z.string().min(1).max(80),
+  activity: z.string().min(1).max(500), note: optionalText.optional(),
+}).strict();
 export const ParseSchema = z.object({
-  time_entries: z.array(z.object({
-    start_at: timestamp, end_at: timestamp, category: z.string().min(1).max(80),
-    activity: z.string().min(1).max(500), note: optionalText.optional(),
-  }).strict()).max(50),
+  time_entries: z.array(timeRecord).max(50),
+  time_replacements: z.array(timeRecord).max(10).optional(),
   transactions: z.array(z.object({
     occurred_at: timestamp, direction: z.enum(['expense', 'income']),
     amount_cents: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
@@ -35,6 +45,7 @@ export const ParseSchema = z.object({
       note:optionalText.optional()}).strict().refine(value=>Object.keys(value).length>0)
       .refine(value=>!value.activity || Boolean(value.category)),
   }).strict()).max(10).optional(),
+  inspirations: z.array(inspirationRecord).max(10).optional(),
   archive_kind: z.enum(['inspiration', 'diary', 'emotion', 'raw']).nullable().optional(),
   unsupported: z.enum(['correction', 'transfer', 'foreign_currency', 'recurring', 'knowledge',
     'schedule', 'history_query', 'obsidian_binding', 'other']).nullable().optional(),
@@ -48,8 +59,12 @@ export function validateParse(value: unknown, categories: Category[], context?: 
   if (!parsed.success) throw new RelayError('PARSER_SCHEMA_INVALID');
   const result = parsed.data;
   if (result.clarify && (result.answer || result.time_entries.length + result.transactions.length
-    + (result.time_events?.length ?? 0) + (result.time_corrections?.length ?? 0) > 0)) {
+    + (result.time_events?.length ?? 0) + (result.time_corrections?.length ?? 0)
+    + (result.time_replacements?.length ?? 0) + (result.inspirations?.length ?? 0) > 0)) {
     throw new RelayError('PARSER_CLARIFICATION_CONFLICT');
+  }
+  if (result.time_replacements?.length && result.time_corrections?.length) {
+    throw new RelayError('PARSER_TIME_REPLACEMENT_CONFLICT');
   }
   for (const correction of result.time_corrections ?? []) {
     const patch=correction.patch;
@@ -60,7 +75,7 @@ export function validateParse(value: unknown, categories: Category[], context?: 
       throw new RelayError('PARSER_TIME_INVALID');
     }
   }
-  for (const entry of result.time_entries) {
+  for (const entry of [...result.time_entries, ...(result.time_replacements ?? [])]) {
     if (Date.parse(entry.end_at) <= Date.parse(entry.start_at)) throw new RelayError('PARSER_TIME_INVALID');
   }
   for (const event of result.time_events ?? []) {
@@ -72,7 +87,7 @@ export function validateParse(value: unknown, categories: Category[], context?: 
       throw new RelayError('PARSER_TIME_EVENT_INVALID');
     }
   }
-  for (const [kind, entries] of [['time', result.time_entries], ['money', result.transactions]] as const) {
+  for (const [kind, entries] of [['time', [...result.time_entries, ...(result.time_replacements ?? [])]], ['money', result.transactions]] as const) {
     for (const entry of entries) {
       if (!categories.some((c) => c.is_active && c.kind === kind && c.code === entry.category)) {
         throw new RelayError('PARSER_CATEGORY_INVALID');

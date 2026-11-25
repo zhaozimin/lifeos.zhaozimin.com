@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 解析契约、合成 JSON 与官方 CLI 替身。
- * [OUTPUT]: 自然回答、活动、账户、追问互斥与格式重试证据。
+ * [OUTPUT]: 完成状态、进程超时、共享预算和格式补试证据。
  * [POS]: 解析边界测试；不消耗模型额度，不冒充真实准确率测评。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import type { Category, ParseResult } from '../src/contracts.js';
 import { validateParse } from '../src/parser/schema.js';
 import { AntigravityParser } from '../src/parser/antigravity.js';
-import { cliEnvironment } from '../src/parser/runner.js';
+import { cliEnvironment, runAgy, AGY_PROCESS_TIMEOUT_MS, PARSER_TOTAL_BUDGET_MS } from '../src/parser/runner.js';
 import { decodeResponse } from '../src/parser/response.js';
 import { RelayError } from '../src/errors.js';
 import { formatDaily, money as formatMoney } from '../src/reply.js';
@@ -116,9 +116,84 @@ test('额度与进程错误不立即重复调用，禁用时完全不调用 CLI'
   await assert.rejects(new AntigravityParser(false, options, run).parse(input), { code: 'PARSER_DISABLED' });
   assert.equal(calls, 1);
 });
+test('CLI 超时的 SUCCESS 和完整局部结果均拒绝入账，且不立即格式重试', async () => {
+  for (const response of ['', JSON.stringify(m({}))]) {
+    let calls = 0;
+    const parser = new AntigravityParser(true, options, async () => {
+      calls++;
+      return { status: 'SUCCESS', finished_reason: 'print_timeout', response, structured_output: m({}) };
+    });
+    await assert.rejects(parser.parse(input), { code: 'PARSER_TIMEOUT' });
+    assert.equal(calls, 1);
+  }
+  assert.throws(() => decodeResponse({ status: 'SUCCESS', finished_reason: 'interrupted',
+    structured_output: m({}) }), { code: 'PARSER_REQUEST_FAILED' });
+});
+test('CLI 的上游 503 单独分类，不误认为模型 JSON 错误或立即重试', async () => {
+  let calls = 0;
+  const parser = new AntigravityParser(true, options, async () => {
+    calls++;
+    return { status: 'ERROR', finished_reason: 'error', response: '',
+      error: 'API error (attempt 1): UNAVAILABLE (code 503): The service is currently unavailable.' };
+  });
+  await assert.rejects(parser.parse(input), { code: 'PARSER_UPSTREAM_UNAVAILABLE' });
+  assert.equal(calls, 1);
+});
+test('非零CLI保留503信封供分类，但不能凭成功正文或结构化字段入账', async () => {
+  const workspace = await mkdtemp(join(tmpdir(), 'lifeos-cli-exit-'));
+  const binary = join(workspace, 'agy');
+  const run = () => runAgy({ ...options, binary, workspace, timeoutMs: 10_000 }, 'synthetic', {});
+  try {
+    for (const [envelope, code] of [
+      [{ status: 'ERROR', error: 'UNAVAILABLE (code 503): No capacity available' }, 'PARSER_UPSTREAM_UNAVAILABLE'],
+      [{ status: 'ERROR', error: 'RESOURCE_EXHAUSTED (code 429): Individual quota reached. Resets in 3h.' }, 'PARSER_QUOTA_EXHAUSTED'],
+      [{ status: 'SUCCESS', structured_output: m({}) }, 'PARSER_REQUEST_FAILED'],
+    ] as const) {
+      await writeFile(binary, `#!${process.execPath}\nprocess.stdout.write(${JSON.stringify(JSON.stringify(envelope))});process.exit(1);`, { mode: 0o700 });
+      const result = await run();
+      assert.throws(() => decodeResponse(result), { code });
+    }
+    await writeFile(binary, `#!${process.execPath}\nprocess.stdout.write("invalid");process.exit(1);`);
+    await assert.rejects(run(), { code: 'PARSER_REQUEST_FAILED' });
+  } finally { await rm(workspace, { recursive: true, force: true }); }
+});
 test('数据库与微信密钥不传给 CLI 子进程', () => {
   assert.deepEqual(cliEnvironment({ HOME: '/home/lifeos', PATH: '/bin', SUPABASE_SERVICE_ROLE_KEY: 'secret',
     GOOGLE_API_KEY: 'not-used', WECHAT_TOKEN: 'private',MEMOS_API_KEY:'memory-private' }), { HOME: '/home/lifeos', PATH: '/bin' });
+});
+
+test('CLI默认等待三分钟并预留回收时间，外层超时仍终止进程', async () => {
+  const workspace = await mkdtemp(join(tmpdir(), 'lifeos-cli-budget-'));
+  const binary = join(workspace, 'agy');
+  try {
+    await writeFile(binary, `#!${process.execPath}\nconst args=process.argv.slice(2);process.stdout.write(JSON.stringify({status:'SUCCESS',response:args[args.indexOf('--print-timeout')+1]}));`, { mode: 0o700 });
+    const envelope = await runAgy({ ...options, binary, workspace }, 'synthetic', {}) as { response: string };
+    assert.equal(envelope.response, '180000ms');
+    await writeFile(binary, `#!${process.execPath}\nsetInterval(()=>{},1000);`);
+    await assert.rejects(runAgy({ ...options, binary, workspace, timeoutMs: 100 }, 'synthetic', {}),
+      { code: 'PARSER_TIMEOUT' });
+  } finally { await rm(workspace, { recursive: true, force: true }); }
+});
+
+test('格式补试只能使用剩余总预算，预算耗尽不再启动模型', async (t) => {
+  let clock = 0;
+  t.mock.method(performance, 'now', () => clock);
+  const budgets: number[] = [];
+  const parser = new AntigravityParser(true, options, async (_prompt, _schema, timeoutMs) => {
+    budgets.push(timeoutMs);
+    if (budgets.length === 1) { clock = 190_000; return { status: 'SUCCESS', response: 'invalid' }; }
+    return { status: 'SUCCESS', structured_output: empty };
+  });
+  assert.deepEqual(await parser.parse(input), empty);
+  assert.deepEqual(budgets, [AGY_PROCESS_TIMEOUT_MS, 50_000]);
+  clock = 0;
+  let calls = 0;
+  const expired = new AntigravityParser(true, options, async () => {
+    calls++; clock = PARSER_TOTAL_BUDGET_MS + 1;
+    return { status: 'SUCCESS', response: 'invalid' };
+  });
+  await assert.rejects(expired.parse(input), { code: 'PARSER_TIMEOUT' });
+  assert.equal(calls, 1);
 });
 
 test('收入分类不能承接支出，未分类仍允许两种方向', () => {
@@ -194,3 +269,26 @@ test('自然回答限长且不得和记账追问混交；回复保留实质回�
   const reply=formatReceipt({time_entries:[],transactions:[money]}, {answer:'预算可以按周检查。'});
   assert.match(reply,/¥38.00/);assert.match(reply,/预算可以按周检查/);
 });
+
+test('灵感记录校验两层标签且不得与追问冲突；回执按已提交快照呈现标题、标签与撤销数',()=>{
+  const valid=validateParse({...empty,archive_kind:'inspiration',inspirations:[{
+    title:'记忆系统架构',
+    summary:'把零散想法沉淀成结构化资产。',
+    content:'我觉得长期助理应该记住每条灵感，并自动维护两层标签体系。',
+    tags:[{group:'AI',name:'记忆系统'},{group:'产品',name:'个人助理'}],
+  }]},categories);
+  assert.equal(valid.inspirations?.length,1);
+  // 禁止斜杠构造第三层
+  assert.throws(()=>validateParse({...empty,inspirations:[{
+    content:'测试原文',tags:[{group:'AI/子层',name:'记忆'}],
+  }]},categories),{code:'PARSER_SCHEMA_INVALID'});
+  // 禁止与追问冲突
+  assert.throws(()=>validateParse({...empty,clarify:'哪个账户？',inspirations:[{content:'测试原文'}]},categories),
+    {code:'PARSER_CLARIFICATION_CONFLICT'});
+  // 含 answer 时仍明确呈现已存入灵感记录
+  const mixed=formatReceipt({time_entries:[],transactions:[],inspirations:[{
+    id:'1',title:'记忆系统架构',summary:'总结',content:'原文',tags:[{group:'AI',name:'记忆系统'}],
+  }]},{archive_kind:'inspiration',answer:'这个思路很扎实。'});
+  assert.equal(mixed,'✓ 已存入灵感记录：记忆系统架构 · AI/记忆系统\n这个思路很扎实。');
+});
+

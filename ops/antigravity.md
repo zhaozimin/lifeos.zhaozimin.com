@@ -49,16 +49,25 @@ SSH 远程授权流程以安装版本实际输出为准。
 在 VPS 上执行：
 
 ```bash
-runuser -l lifeos -c 'cd /var/lib/lifeos/parser-workspace && exec /home/lifeos/.local/bin/agy -p "只回复 ok，不调用工具。" --model gemini-3.8-flash-high --output-format json --print-timeout 60s'
+runuser -l lifeos -c 'cd /var/lib/lifeos/parser-workspace && exec /home/lifeos/.local/bin/agy -p "只回复 ok，不调用工具。" --model gemini-3.8-flash-high --output-format json --print-timeout 180s'
 ```
 
 要求进程正常退出，JSON 的 `status` 为 `SUCCESS`。
-用户指定 Gemini 3.8；使用 CLI 已列出的 `gemini-3.8-flash-high`。
+首次授权验收使用已列出的`gemini-3.8-flash-high`。
 `response` 必须包含要求的回复。
-业务解析当前使用 `gemini-3.8-flash-low`，仍为 Gemini 3.8 Flash。
-High 档保留为首次授权验收记录，业务选择 Low 档降低提取等待。
+配置默认使用`gemini-3.8-flash-low`。
+生产实际型号由AGY_MODEL指定，启动日志记录型号。
+切换前用AGY_MODEL为四类语义探针指定候选模型。
+候选必须通过问答、记录、计时和纠错，再重启服务。
+High档仅保留为首次授权验收记录。
 业务解析优先读取 `structured_output`，否则解析 `response`。
 两者都必须通过应用 schema 校验。
+CLI的SUCCESS不能单独证明调用完成。
+finished_reason为print_timeout时，拒绝局部结果。
+生产单次等待180秒，进程上限195秒。
+格式补试共用240秒预算，模型记录租约为六分钟。
+UNAVAILABLE(code 503)表示上游当前不能完成请求。
+503不能证明登录失效或禁止重复-p调用。
 安装成功与模型验收分开记录，未授权不能标记 P0 完成。
 传话筒不得传入 `--dangerously-skip-permissions`。
 

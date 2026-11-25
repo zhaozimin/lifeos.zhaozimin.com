@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 生产迁移与临时 PostgreSQL 引擎。
- * [OUTPUT]: 事务、自然回答、对话隔离与本人AAL2权限证据。
+ * [OUTPUT]: 事务、解析租约、最终失败回执与本人AAL2权限证据。
  * [POS]: 数据库行为验收；使用合成数据，不连接生产项目。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -307,6 +307,44 @@ test('失败保留原话并延期；撤销正在解析的消息阻止迟到结�
   await row('select * from public.run_command($1,$2,$3)', [undo, u.lease_token, 'undo']); await settle(u);
   const stale = await apply(r, { ...empty, transactions: [money] }); assert.ok(stale.revoked_at);
   assert.equal((await row('select count(*)::int n from public.transactions where raw_input_id=$1', [id])).n, 0);
+});
+
+test('慢模型领取六分钟租约，五次失败只恢复最终回执且不再解析', async () => {
+  const person = 'abababab-abab-4bab-8bab-abababababab';
+  await db.query('insert into auth.users values($1)', [person]);
+  const id = await ingest('record', '合成慢响应场景', person);
+  let firstRevision;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const r = await row('select * from public.claim_next_input($1,true)', [person]);
+    assert.equal(r.id, id); assert.equal(r.attempts, attempt);
+    const remaining = await row('select extract(epoch from(lease_until-now()))::int seconds from public.raw_inputs where id=$1', [id]);
+    assert.ok(remaining.seconds >= 350 && remaining.seconds <= 360);
+    const failed = await row('select * from public.fail_input($1,$2,$3)', [id, r.lease_token, 'PARSER_TIMEOUT']);
+    if (attempt === 1) {
+      firstRevision = failed.receipt_revision;
+      assert.equal(failed.receipt_text, null);
+      await db.query("update public.raw_inputs set receipt_text='稍后会重试。',delivered_at=now(),reply_attempts=2 where id=$1", [id]);
+    } else if (attempt < 5) {
+      assert.equal(failed.receipt_text, '稍后会重试。');
+      assert.equal(failed.receipt_revision, firstRevision);
+      assert.ok(failed.delivered_at);
+    } else {
+      assert.equal(failed.receipt_text, null); assert.equal(failed.delivered_at, null);
+      assert.equal(failed.receipt_revision, firstRevision + 1); assert.equal(failed.reply_attempts, 0);
+      const stale = await row('select * from public.fail_input($1,$2,$3)', [id, r.lease_token, 'PARSER_TIMEOUT']);
+      assert.equal(stale.receipt_revision, failed.receipt_revision);
+    }
+    await db.query('update public.raw_inputs set next_attempt_at=now() where id=$1', [id]);
+  }
+  const terminal = await row('select * from public.claim_next_input($1,true)', [person]);
+  assert.equal(terminal.id, id); assert.equal(terminal.attempts, 5); assert.equal(terminal.status, 'failed');
+  await settle(terminal);
+  assert.equal(await row('select * from public.claim_next_input($1,true)', [person]), undefined);
+  assert.equal((await row('select text from public.raw_inputs where id=$1', [id])).text, '合成慢响应场景');
+  for (const role of ['anon', 'authenticated', 'service_role']) {
+    const permission = await row("select has_function_privilege($1,'public.claim_next_input_before_wait_budget(uuid,boolean)','EXECUTE') allowed", [role]);
+    assert.equal(permission.allowed, role === 'service_role');
+  }
 });
 
 test('AAL2 只读本人账目；AAL1、匿名与他人无权读取，客户端不能写入或调用事务', async () => {

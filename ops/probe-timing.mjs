@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 已构建relay、官方agy授权与隔离规则工作区。
+ * [INPUT]: 已构建relay、官方agy授权、AGY_MODEL与隔离规则工作区。
  * [OUTPUT]: 连续边界、单次切换和明确执行请求的模型计划证据。
  * [POS]: 计时上线探针；串行模型调用，不连接微信、数据库或MemOS。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import {AntigravityParser} from '../apps/relay/dist/src/parser/antigravity.js';
 import {verifyWorkspaceRules} from '../apps/relay/dist/src/parser/rules.js';
-const options={binary:'/home/lifeos/.local/bin/agy',model:'gemini-3.8-flash-low',workspace:process.env.AGY_WORKSPACE};
+const options={binary:'/home/lifeos/.local/bin/agy',model:process.env.AGY_MODEL??'gemini-3.8-flash-low',workspace:process.env.AGY_WORKSPACE};
 assert.ok(options.workspace);await verifyWorkspaceRules(options.workspace);
 const parser=new AntigravityParser(true,options);
 const categories=[['work','工作'],['rest','休息'],['food','饮食'],['uncategorized','未分类']]

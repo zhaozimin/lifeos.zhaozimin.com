@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 已构建relay、官方agy授权与指定规则工作区。
+ * [INPUT]: 已构建relay、官方agy授权、AGY_MODEL与指定规则工作区。
  * [OUTPUT]: 合成提问、追问、混合句及记录回归的真实模型证据。
  * [POS]: 问答上线探针；串行调用，不连接数据库或微信。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import { AntigravityParser } from '../apps/relay/dist/src/parser/antigravity.js';
 import { verifyWorkspaceRules } from '../apps/relay/dist/src/parser/rules.js';
-const options={binary:'/home/lifeos/.local/bin/agy',model:'gemini-3.8-flash-low',
+const options={binary:'/home/lifeos/.local/bin/agy',model:process.env.AGY_MODEL??'gemini-3.8-flash-low',
   workspace:process.env.AGY_WORKSPACE??'/var/lib/lifeos/parser-workspace'};
 await verifyWorkspaceRules(options.workspace);
 const parser=new AntigravityParser(true,options);

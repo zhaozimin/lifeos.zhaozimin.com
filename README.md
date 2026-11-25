@@ -37,8 +37,9 @@ LifeOS 是一套面向个人的生活记录系统。通过微信表达正在做�
 
 | 模块 | 能力 |
 |---|---|
-| 微信管家 | 记录活动与收支，支持自然问答、追问及按时段纠错 |
-| 时间 | 日／周时间轴、活动切换、大类统计、历史编辑 |
+| 微信管家 | 记录活动、收支与灵感，支持自然问答、追问、按时段纠错及区间替换 |
+| 时间 | 日／周时间轴、活动切换、大类统计、WHOOP 睡眠衔接、10 分钟如厕封顶与历史编辑 |
+| 灵感记录 | 完整保留原话正文，独立生成短标题、总结与严格两层标签，提供零 JS HTML / Markdown / JSON 公开抓取入口供 Agent 每日总结 |
 | 财务 | 收支流水、财务状况、资金流量与图表钻取 |
 | 订阅 | 品牌卡片、续订统计、浏览器通知及可选的七天微信提醒 |
 | 健康 | WHOOP 指标、趋势、训练记录与每日运动建议 |
@@ -178,7 +179,7 @@ supabase db push --include-all --dry-run
 supabase db push --include-all
 ```
 
-核对 dry-run 目标是自己的空项目。当前有 `0001` 至 `0027` 共 27 个迁移；不要使用 `db reset` 操作已有生产库。也可以在 SQL Editor 按文件顺序执行全部迁移，但应自行同步迁移历史，避免日后重复应用。[CLI 说明](https://supabase.com/docs/reference/cli/supabase-db-push)
+核对 dry-run 目标是自己的空项目。当前有 `0001` 至 `0032` 共 32 个迁移；不要使用 `db reset` 操作已有生产库。也可以在 SQL Editor 按文件顺序执行全部迁移，但应自行同步迁移历史，避免日后重复应用。[CLI 说明](https://supabase.com/docs/reference/cli/supabase-db-push)
 
 在 **Authentication → Users** 手动创建本人邮箱和密码账号，确认邮箱状态，记下用户 UUID。关闭公开注册，启用 TOTP；本地 `supabase/config.toml` 不会自动改变托管项目的认证配置。密码建议从初始化起就满足至少 20 位。
 
@@ -222,8 +223,8 @@ begin
     (v_owner,'money','living','生活消费','expense'),
     (v_owner,'money','income','收入','income')
     on conflict(owner_id,kind,code) do nothing;
-  insert into public.visitor_settings(id,owner_id,enabled,share_activity_titles)
-    values(1,v_owner,false,false) on conflict(id) do nothing;
+  insert into public.visitor_settings(id,owner_id,enabled,share_activity_titles,share_inspirations)
+    values(1,v_owner,false,false,false) on conflict(id) do nothing;
 end;
 $$;
 ```
@@ -385,17 +386,18 @@ npx wrangler pages deploy dist --project-name "$LIFEOS_PAGES_PROJECT" --branch m
 
 进入时间设置检查分类，在财务设置创建自己的支付账户、分类和预算，再开始记账。不要复制作者的真实账户或余额。
 
-默认访客公开权限仍为关闭。确认愿意公开哪些数据后，才在 SQL Editor 执行以下语句；保留原始活动标题隐藏。要关闭公开访问，把 `enabled` 改为 `false`。
+默认访客公开权限仍为关闭。确认愿意公开哪些数据后，才在 SQL Editor 执行以下语句；保留原始活动标题隐藏。如果希望公开「灵感记录」并允许外部页面或 Agent 每日抓取（`/inspirations/feed`、`/inspirations.md`、`/inspirations.json`，均支持 `?date=today` 或 `?date=YYYY-MM-DD`），把 `share_inspirations` 改为 `true`。要关闭公开访问，把 `enabled` 改为 `false`。
 
 ```sql
 update public.visitor_settings
-set enabled=true, share_activity_titles=false
+set enabled=true, share_activity_titles=false, share_inspirations=false
 where id=1 and owner_id='REPLACE_WITH_OWNER_UUID'::uuid;
 ```
 
 上线验收：
 
 - 在微信发“帮助”，再描述自己实际正在做的事，最后发“停止计时”；核对回执与网页。
+- 在微信发送一段成段思考或“帮我记一下……”，核对灵感记录页已完整保留原文并生成短标题、总结与两层标签。
 - 未启用解析器时应明确提示原话入库，不能当成 AI 问答已经接通。
 - 未登录请求私人 `/api/dashboard` 应为 401；只完成密码、未验证动态码时应为 403。
 - 使用未登录浏览器检查公开范围，金额和账号应打码，访客不能新增、保存、同步或下载私人数据。
@@ -442,7 +444,7 @@ MEMOS_AGENT_ID=lifeos-butler
 
 ### 11. 按需启用订阅七天微信提醒
 
-完成订阅服务、微信绑定、relay启动和27个迁移后，在 **VPS root 终端** 执行：
+完成订阅服务、微信绑定、relay启动和32个迁移后，在 **VPS root 终端** 执行：
 
 ```sh
 install -m 0644 /opt/lifeos/ops/lifeos-subscription-reminders.service /etc/systemd/system/
@@ -461,7 +463,7 @@ systemctl list-timers lifeos-subscription-reminders.timer
 | 现象 | 先检查什么 |
 |---|---|
 | 安装脚本提示摘要变化 | 官方安装器或包已更新，先审阅，不删除校验 |
-| doctor 提示账号或兜底分类缺失 | 27 个迁移、Auth UUID、初始化 SQL 和 relay.env 是否指向同一项目 |
+| doctor 提示账号或兜底分类缺失 | 32 个迁移、Auth UUID、初始化 SQL 和 relay.env 是否指向同一项目 |
 | 二维码看不到或过期 | 取回最新 `login-qr.png`，保持扫码进程运行并完成手机确认 |
 | 扫码成功但微信不回复 | relay 是否运行、是否误开第二个轮询器、解析器是否关闭 |
 | Google 登录成功但模型失败 | 实际可用模型、账号资格、额度和 SSH 授权状态 |

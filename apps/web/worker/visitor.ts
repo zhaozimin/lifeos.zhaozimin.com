@@ -10,6 +10,7 @@ import {HttpError,type Env} from './auth';
 import {toSegment,timeSummary} from './native-data';
 import {today,bounds,validDay,daysBetween} from '../src/model';
 import {visitorFinance} from './visitor-finance';
+import {visitorInspirationsResponse} from './visitor-inspirations';
 const nativeInput=z.object({method:z.literal('GET'),path:z.enum(['/v1/health','/v1/time/configuration','/v1/time/segments','/v1/time/summary/range','/v1/fin/configuration','/v1/fin/transactions','/v1/fin/budget/status']),params:z.record(z.string(),z.unknown()).default({})}).strict();
 const catalog=z.object({items:z.array(z.object({id:z.string().regex(/^[a-f0-9]{24}$/),logoSrc:z.string().regex(/^\/api\/visitor\/subscriptions\/logo\/[a-f0-9]{24}$/),name:z.string().max(100),category:z.string().max(100),cycle:z.string().max(30),status:z.enum(['active','paused','ended','cancelled','expired']),renewalDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/)}).strict()).max(500)}).strict();
 async function rpc(client:SupabaseClient,name:string,args:Record<string,unknown>){
@@ -17,8 +18,11 @@ async function rpc(client:SupabaseClient,name:string,args:Record<string,unknown>
  if(error)throw new HttpError(error.code==='42501'?403:503,'访客数据暂时不可用。');
  return data;
 }
-export async function visitor(client:SupabaseClient,env:Env,url:URL,method:string,input?:unknown){
+export async function visitor(client:SupabaseClient,env:Env,url:URL,method:string,input?:unknown,request?:Request){
  const path=url.pathname.slice('/api/visitor'.length);
+ if(path==='/inspirations'&&method==='GET'){
+  return visitorInspirationsResponse(client,url,request??new Request(url.toString()),'json');
+ }
  if(/^\/subscriptions\/logo\/[a-f0-9]{24}$/.test(path)&&method==='GET'){
   if(!await rpc(client,'visitor_policy',{}))throw new HttpError(403,'访客访问尚未开启。');
   if(!env.SUBSCRIPTIONS)throw new HttpError(503,'订阅服务暂时不可用。');

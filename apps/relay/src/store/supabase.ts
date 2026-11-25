@@ -1,6 +1,6 @@
 /**
  * [INPUT]: Supabase服务端身份、受限账目及消息记忆事务。
- * [OUTPUT]: 原话与记忆租约、时间纠错事务、回复确认和订阅提醒入队。
+ * [OUTPUT]: 原话租约、时间纠错与区间替换事务、回复确认。
  * [POS]: 唯一数据库适配器；高权限密钥不进入 CLI 子进程或日志。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -17,11 +17,18 @@ const SnapshotSchema = z.object({
   transactions: z.array(z.object({ occurred_at: z.string(), direction: z.enum(['expense','income']),
     amount_cents: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER),
     currency: z.string(), category: z.string(), account: z.string().nullable(), note: z.string().nullable() })),
+  inspirations: z.array(z.object({
+    id: z.string(), title: z.string().nullable(), summary: z.string().nullable(), content: z.string(),
+    tags: z.array(z.object({ group: z.string(), name: z.string() })).default([]),
+  })).optional().default([]),
 });
 const ContextSchema = z.object({
   accounts: z.array(z.object({ name: z.string().min(1), type: z.string().nullable() })),
   ongoing: z.array(z.object({ id: z.uuid(), revision: z.number().int().positive(),
     start_at: z.string(), activity: z.string(), category: z.string() })),
+  inspiration_tags: z.array(z.object({
+    group: z.string().min(1), tags: z.array(z.string().min(1)),
+  })).optional().default([]),
 });
 
 export class SupabaseStore implements Store, DailySummaryStore, MemoryQueue, SubscriptionReminderStore {
@@ -75,7 +82,21 @@ export class SupabaseStore implements Store, DailySummaryStore, MemoryQueue, Sub
       received_at:z.string()})).max(8).parse(await this.rpc('get_recent_dialogue',{p_input_id:input.id}));
   }
   async apply(input: RawInput, result: ParseResult, context?: StewardContext): Promise<RawInput> {
-    const {time_corrections=[],...plan}=result;
+    const {time_corrections=[],time_replacements=[],...plan}=result;
+    if (time_replacements.length) {
+      let targets:unknown=null;
+      try {
+        targets=await this.rpc('find_time_replacement_targets',{
+          p_input_id:input.id,p_requests:time_replacements});
+      } catch (error) {
+        // 输入事实无效交给事务生成追问；网络、权限及服务错误继续上报。
+        if (!(error instanceof RelayError) || !['DB_22023','DB_22007','DB_22008'].includes(error.code)) throw error;
+      }
+      return this.row(await this.rpc('apply_time_replacements',{
+        p_input_id:input.id,p_lease_token:input.lease_token,
+        p_result:{...plan,time_replacements,time_corrections},p_expected_targets:targets,
+        p_expected_ongoing:context?.ongoing??null}));
+    }
     if (time_corrections.length) {
       const targets=await this.rpc('find_time_correction_targets',{
         p_input_id:input.id,p_requests:time_corrections});
@@ -144,6 +165,7 @@ export class SupabaseStore implements Store, DailySummaryStore, MemoryQueue, Sub
     await this.rpc('get_recent_dialogue',{p_input_id:'00000000-0000-0000-0000-000000000000'});
     await this.rpc('get_memory_sync_status',{p_owner_id:this.ownerId});
     await this.rpc('find_time_correction_targets',{p_input_id:'00000000-0000-0000-0000-000000000000',p_requests:[]});
+    await this.rpc('find_time_replacement_targets',{p_input_id:'00000000-0000-0000-0000-000000000000',p_requests:[]});
   }
   async claimMemory():Promise<MemoryJob|null>{
     const data=await this.rpc('claim_memory_job',{p_owner_id:this.ownerId});

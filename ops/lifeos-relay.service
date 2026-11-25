@@ -1,6 +1,6 @@
 # [INPUT]: 私有relay.env、可选memos.env与已构建的relay。
 # [OUTPUT]: 开机自启、单实例和失败重启的传话筒。
-# [POS]: VPS 服务边界；只出站，不改 SSH 或 x-ui。
+# [POS]: VPS服务边界；停止宽限覆盖四分钟模型预算，只建立出站连接。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 [Unit]
 Description=LifeOS WeChat relay
@@ -24,7 +24,7 @@ ExecStartPre=/home/lifeos/.local/bin/node dist/src/main.js --check
 ExecStart=/usr/bin/flock -n /var/lib/lifeos/relay.lock /home/lifeos/.local/bin/node dist/src/main.js
 Restart=on-failure
 RestartSec=15
-TimeoutStopSec=85
+TimeoutStopSec=270
 KillMode=control-group
 UMask=0077
 NoNewPrivileges=true

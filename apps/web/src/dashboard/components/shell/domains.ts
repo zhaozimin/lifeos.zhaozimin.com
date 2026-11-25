@@ -9,15 +9,17 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { LucideIcon } from "lucide-react";
-import { Activity, ArrowLeftRight, CalendarDays, LayoutGrid, Leaf, NotebookPen, TrendingUp, ChartNoAxesCombined, HeartPulse, History, Inbox, Landmark, List, Repeat, Settings, SlidersHorizontal } from "lucide-react";
+import { Activity, ArrowLeftRight, CalendarDays, LayoutGrid, Leaf, Lightbulb, NotebookPen, TrendingUp, ChartNoAxesCombined, HeartPulse, History, Inbox, Landmark, List, Repeat, Settings, SlidersHorizontal, Tags } from "lucide-react";
 
-export type DomainId = "time" | "finance" | "subscriptions" | "health" | "records" | "settings";
+export type DomainId = "time" | "finance" | "subscriptions" | "health" | "inspirations" | "records" | "settings";
 
-export type NavItem = { to: string; label: string; icon: LucideIcon; matchPrefix?: string };
+export type NavItem = { to: string; label: string; icon: LucideIcon; matchPrefix?: string; ownerOnly?: boolean };
 
 export interface Domain {
   id: DomainId;
   label: string;
+  /** 窄屏底栏短名称，缺省时复用 label */
+  shortLabel?: string;
   icon: LucideIcon;
   /** 一级栏点击后去的页面 */
   home: string;
@@ -25,6 +27,8 @@ export interface Domain {
   prefixes: string[];
   /** 二级栏导航；ownSidebar 领域为空 */
   nav: NavItem[];
+  /** 仅本人 AAL2 可见领域，访客一级栏不渲染 */
+  ownerOnly?: boolean;
   /** iframe 子系统：内容区铺满，不加宿主内边距 */
   embedded?: boolean;
   /** iframe 自带二级栏：宿主不画二级栏，也不显示收起键 */
@@ -62,6 +66,13 @@ export const DOMAINS: Domain[] = [
     ],
   },
   {
+    id: "inspirations", label: "灵感记录", shortLabel: "灵感", icon: Lightbulb, home: "/inspirations", prefixes: ["/inspirations"],
+    nav: [
+      { to: "/inspirations", label: "全部灵感", icon: Lightbulb },
+      { to: "/inspirations/tags", label: "标签管理", icon: Tags, ownerOnly: true },
+    ],
+  },
+  {
     id: "records", label: "记录", icon: History, home: "/records", prefixes: ["/records", "/inbox"],
     nav: [
       { to: "/records", label: "历史记录", icon: History },
@@ -86,7 +97,7 @@ export function titleForPath(pathname: string): string {
 }
 export function domainForAccess(domain:Domain,owner:boolean):Domain{
  if(owner)return domain;
- const nav=domain.nav.filter(n=>domain.id==='health'||!n.to.includes('/settings'));
+ const nav=domain.nav.filter(n=>!n.ownerOnly&&(domain.id==='health'||!n.to.includes('/settings')));
  if(domain.id==='subscriptions')return domain;
  return {...domain,nav};
 }

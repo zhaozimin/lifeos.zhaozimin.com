@@ -20,5 +20,6 @@ original-timeline.test.mjs: 复用本机时间轴裁剪、空白和DST测试。
 original-timeline_interaction.test.mjs: 复用缩放、吸附、平移及端点约束测试。
 original-timeline_callouts.test.mjs: 复用极短时段细节栏排布测试。
 health-ui.test.mjs: 健康子目录资源闭合与模块内容版本一致性，防止旧缓存继续执行。
+inspirations.test.ts: 灵感私有接口AAL2门槛、访客零暴露、两层标签校验与409乐观锁冲突回归。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

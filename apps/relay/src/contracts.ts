@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 微信、受限账目与MemOS云接口的业务约定。
- * [OUTPUT]: 控制指令、时间纠错计划、记忆后端与持久化队列接口。
+ * [OUTPUT]: 控制指令、时间纠错与区间替换计划、记忆接口。
  * [POS]: relay 的依赖方向中心，不依赖网络或具体存储。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -30,14 +30,21 @@ export interface TimeCorrection {
 export type ArchiveKind = 'inspiration' | 'diary' | 'emotion' | 'raw';
 export type UnsupportedReason = 'correction' | 'transfer' | 'foreign_currency' | 'recurring' |
   'knowledge' | 'schedule' | 'history_query' | 'obsidian_binding' | 'other';
+export interface InspirationTagPair { group: string; name: string }
+export interface InspirationRecord {
+  title?: string | null; summary?: string | null; content: string; tags?: InspirationTagPair[];
+}
 export interface StewardContext {
   accounts: Array<{ name: string; type: string | null }>;
   ongoing: Array<{ id: string; revision: number; start_at: string; activity: string; category: string }>;
+  inspiration_tags?: Array<{ group: string; tags: string[] }>;
 }
 export interface ParseResult {
   time_entries: TimeRecord[]; transactions: MoneyRecord[]; clarify: string | null;
   time_events?: TimeEvent[]; archive_kind?: ArchiveKind | null; unsupported?: UnsupportedReason | null;
   time_corrections?: TimeCorrection[];
+  time_replacements?: TimeRecord[];
+  inspirations?: InspirationRecord[];
   answer?: string | null;
 }
 export interface DialogueTurn { text: string; reply: string | null; received_at: string }
@@ -82,6 +89,7 @@ export interface RecordSnapshot {
   time_entries: Array<{ start_at: string; end_at: string | null; duration_min: number | null; activity: string; category: string }>;
   transactions: Array<{ occurred_at: string; direction: 'expense' | 'income'; amount_cents: number;
     currency: string; category: string; account: string | null; note: string | null }>;
+  inspirations?: Array<{ id: string; title: string | null; summary: string | null; content: string; tags: InspirationTagPair[] }>;
 }
 export interface ReplyTarget { user_id: string; context_token: string }
 export interface DailySummary {

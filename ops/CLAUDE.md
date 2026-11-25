@@ -7,7 +7,7 @@ check_public_repo_test.py: 临时Git仓库验收；覆盖未跟踪、暂存残�
 ui-preview.mjs: 根目录UI启动；补齐依赖并构建订阅，不读取云端凭据。
 
 install-antigravity.sh: root 安装入口；创建专用用户、私有登录目录及独立运行目录，校验官方安装脚本，以 lifeos 身份安装 CLI；不改现有服务与网络规则。
-antigravity.md: 运维入口；说明安装、SSH 授权、Gemini 3.8 验收及资格错误的恢复步骤，凭据只留在 VPS。
+antigravity.md: 运维入口；说明安装、SSH授权、候选模型验收及资格错误恢复，凭据只留在VPS。
 install-node.sh: Node.js 22 安装入口；校验官方发布包，安装至 lifeos 主目录，不修改系统级命令。
 backup-project.mjs: 回收前备份；用本机 CLI 临时权限导出 public/auth/storage，下载 Storage 实体，私有加密落盘并反解校验。
 import-categories.py: 分类导入入口；只读本机活跃分类，输出仅新增的私有 SQL，不读取交易与余额。
@@ -31,7 +31,7 @@ lifeos-backup.timer: 北京时间每日 02:00 调度；离线错过时补跑。
 deploy-backup.sh: 备份上线入口；首次执行通过后启用定时器，失败不影响 relay。
 backup_tools_test.py: 运维行为验收；验证分类筛选、SQL 转义与保留期清理边界。
 backup.md: 数据恢复入口；定义调度、只读账号、限桶凭据、异地副本校验与隔离恢复边界。
-lifeos-relay.service: systemd常驻入口；装载独立MemOS凭据，保持单实例、出站网络和进程组回收。
+lifeos-relay.service: systemd常驻入口；装载独立MemOS凭据，停止宽限覆盖模型预算，保持单实例与进程组回收。
 lifeos-daily.service: 小结入队任务；使用既有数据库配置，不启动额外微信接收器。
 lifeos-daily.timer: 北京时间 23:30 调度；错过不在晨间补发。
 lifeos-subscription-reminders.service: 订阅七天提醒入队；读取回环API及当前绑定，复用relay投递。
@@ -43,11 +43,11 @@ lifeos-whoop.service: 独立WHOOP用户；每30分钟同步，发布健康副本
 deploy-daily.sh: 小结上线入口；默认仅安装，明确 --enable 才激活新定时器。
 daily.md: 小结运维入口；定义上下文、幂等、只读预览与主动推送的启用边界。
 deploy-relay.sh: VPS 部署入口；构建依赖并同步管家 AGENTS.md，通过一致性检查后接收消息。
-probe-steward.mjs: 官方模型语义探针；合成语句验证活动、收支与存档，不连接微信或数据库。
-probe-dialogue.mjs: 官方模型对话探针；合成问答和记账边界，可按名称复验失败场景，不发送微信。
+probe-steward.mjs: 官方模型语义探针；AGY_MODEL选择候选，验证活动、收支与存档，不连接微信或数据库。
+probe-dialogue.mjs: 官方模型对话探针；AGY_MODEL选择候选，按名称验证问答和记账，不发送微信。
 probe-memory.mjs: 云记忆端到端探针；隔离合成身份，验证无最近对话时agy使用跨会话云记忆。
-probe-timing.mjs: 计时语义探针；验证连续边界、单次切换和直接执行，不发送微信。
-probe-time-corrections.mjs: 纠错语义探针；合成时段验证修改、混合切换、日期和普通补录，不读真实账本。
+probe-timing.mjs: 计时语义探针；AGY_MODEL选择候选，验证连续边界、单次切换和直接执行。
+probe-time-corrections.mjs: 纠错语义探针；AGY_MODEL选择候选，合成时段验证修改、切换、日期和补录。
 probe-time-groups.mjs: 大类语义探针；验证工作、如厕与本人休息措辞差异，不写业务库。
 relay.md: 常驻收发说明；定义私有配置、运行检查与失效会话恢复。
 memory.md: 云记忆运维；说明身份、同步状态、未知写入核查、启停和备份边界。
