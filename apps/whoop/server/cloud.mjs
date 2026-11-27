@@ -59,7 +59,7 @@ export class CloudBridge {
   }
   async morning(){
     const prefs=this.app.reports.preferences(),today=localClock(new Date(),prefs.timeZone);
-    if(today.time<prefs.reportTime||today.time>='12:00')return;
+    if(today.time<prefs.reportTime||today.time>='16:00')return;
     const plan=this.app.store.plan(today.date,prefs.timeZone);
     if(plan?.publication?.state!=='published')return;
     return this.rpc('enqueue_whoop_morning',{p_owner_id:this.ownerId,p_date:today.date,

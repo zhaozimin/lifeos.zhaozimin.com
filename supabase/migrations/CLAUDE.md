@@ -37,5 +37,6 @@
 0030_whoop_sleep_transitions.sql: 睡眠过渡与如厕封顶；邻近短空白补刷手机、跨夜生活自理醒后转手机、未结如厕超10分转休息。
 0031_inspirations.sql: 灵感记录独立领域与严格两层标签系统；原话正文不改写、独立标题总结、AAL2读写与微信双保险提交。
 0032_visitor_inspirations.sql: 灵感公开可抓取投影；visitor_settings 新增 share_inspirations 开关（默认 false），提供按上海自然日与两层标签筛选的零私密字段只读 RPC。
+0033_morning_time_audit.sql: 微信纠错空替换字段容错、昨日时间轴异常巡检（空白、未闭合、睡前截断及洗漱35/洗澡50/吃饭90分钟超时）、合体WHOOP晨报（放宽至16:00）与已投递晨报进入最近对话。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

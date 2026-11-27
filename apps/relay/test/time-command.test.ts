@@ -64,6 +64,11 @@ test('仓储先获取版本快照，再提交区间RPC，普通计划不携带�
   assert.deepEqual(calls[1]!.args.p_expected_targets,targets);assert.deepEqual(calls[1]!.args.p_expected_ongoing,[]);
   calls.length=0;await store.apply(input,{time_entries:[],transactions:[],clarify:null,time_replacements:[]});
   assert.equal(calls[0]!.name,'apply_steward');assert.equal(Object.hasOwn(calls[0]!.args.p_result as object,'time_replacements'),false);
+  calls.length=0;await store.apply(input,{time_entries:[],transactions:[],clarify:null,time_replacements:[],
+    time_corrections:[{target:{position:'current'},patch:{activity:'洗漱',category:'work'}}]});
+  assert.deepEqual(calls.map(x=>x.name),['find_time_correction_targets','apply_time_corrections']);
+  assert.equal(Object.hasOwn(calls[1]!.args.p_result as object,'time_replacements'),false);
+  assert.equal(Object.hasOwn(calls[1]!.args.p_result as object,'time_corrections'),true);
 });
 test('回执来自已提交的原段与新片段，撤销成功与冲突分别说明',()=>{
   const text=formatReceipt({time_entries:[{start_at:'2026-06-18T01:51:00Z',end_at:'2026-06-18T02:15:00Z',activity:'洗漱',category:'生活自理',duration_min:24},

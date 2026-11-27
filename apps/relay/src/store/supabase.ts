@@ -101,7 +101,7 @@ export class SupabaseStore implements Store, DailySummaryStore, MemoryQueue, Sub
       const targets=await this.rpc('find_time_correction_targets',{
         p_input_id:input.id,p_requests:time_corrections});
       return this.row(await this.rpc('apply_time_corrections',{
-        p_input_id:input.id,p_lease_token:input.lease_token,p_result:result,
+        p_input_id:input.id,p_lease_token:input.lease_token,p_result:{...plan,time_corrections},
         p_expected_targets:targets,p_expected_ongoing:context?.ongoing??null}));
     }
     return this.row(await this.rpc('apply_steward', { p_input_id: input.id, p_lease_token: input.lease_token,
