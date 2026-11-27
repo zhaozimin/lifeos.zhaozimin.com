@@ -15,6 +15,7 @@
 @import "./components/shell/shell.css";
 @import "./components/shell/sidebar.css";
 @import "./components/ui/timeline.css";
+@import "./components/ui/timeline-ai.css";
 
 /* dark: 变体跟随 ThemeProvider 写入的 data-theme，而不是系统媒体查询 */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

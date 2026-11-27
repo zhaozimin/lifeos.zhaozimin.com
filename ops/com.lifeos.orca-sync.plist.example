@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  [INPUT]: 本机 Node.js 22 路径、仓库 apps/orca-sync/src/cli.mjs 与 .private/orca-sync.env。
+  [OUTPUT]: macOS launchd 每 5 分钟自动静默同步 Orca AI 工作时长至 VPS/Supabase。
+  [POS]: ops 的本机调度模板；复制到 ~/Library/LaunchAgents/com.lifeos.orca-sync.plist 并替换路径后生效。
+  [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.lifeos.orca-sync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/path/to/lifeos.zhaozimin/apps/orca-sync/src/cli.mjs</string>
+    <string>--push</string>
+    <string>--env</string>
+    <string>/path/to/lifeos.zhaozimin/.private/orca-sync.env</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>300</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/lifeos-orca-sync.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/lifeos-orca-sync.err.log</string>
+</dict>
+</plist>

@@ -57,6 +57,9 @@ wechat-sdk-patch.test.mjs: 补丁边界测试；验证超时恢复、等待时�
 wechat.md: 微信绑定说明；定义扫码、配对码、凭据位置与当前接通边界。
 package.json: 扫码工具依赖；锁定独立 SDK 与二维码渲染器，运行时要求 Node.js 22。
 package-lock.json: npm 完整性清单；固定扫码依赖树，由 npm 生成。
+com.lifeos.orca-sync.plist.example: macOS launchd 定时模板；每15分钟执行脱敏采集并通过 SSH 管道推送 VPS。
+deploy-orca-ingest.sh: VPS 接收器部署脚本；安装 /opt/lifeos-orca/ingest.mjs 并复用 /etc/lifeos 既有 Supabase 密钥，Mac 侧零密钥。
+orca-sync.md: Orca AI 双轨同步运维手册；说明本地试跑、VPS 接收器部署与 launchd 启用边界。
 
 选型：腾讯官方插件依赖完整 OpenClaw。独立 SDK 直接提供登录接口，当前选用 @wechatbot/wechatbot 2.2.0。其扫码长轮询超时偏短，安装后应用校验补丁。扫码与业务消息轮询分开执行。
 

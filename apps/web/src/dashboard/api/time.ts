@@ -7,6 +7,7 @@
 
 import { request, type RequestOptions } from "./core";
 import type {
+  AiTelemetryRange,
   AuditEvent,
   Configuration,
   GapsResponse,
@@ -85,6 +86,11 @@ export const timeApi = {
     ),
   summary: (from: string, to: string, options: ReadOptions = {}) =>
     request<RangeSummary>("GET", "/v1/time/summary/range", {
+      params: { from, to },
+      signal: options.signal,
+    }),
+  aiRange: (from: string, to: string, options: ReadOptions = {}) =>
+    request<AiTelemetryRange>("GET", "/v1/time/ai", {
       params: { from, to },
       signal: options.signal,
     }),

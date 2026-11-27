@@ -1,8 +1,8 @@
 /**
- * [INPUT]: 依赖所见版本号和可取消的时段/统计/configuration API（含超长软标记阈值）、Layout 软刷新信号、记录时区与 UTC 当前瞬间、timeline 缩放/交互真源、日/周时间轴组件及共享编辑确认原语。
- * [OUTPUT]: 大类分布、来源筛选、日周时间轴、常显视图切换和本人版本编辑。
- * [POS]: pages 的时间账浏览核心；同时向时间轴下发墙钟当前分钟、绝对当前瞬间与服务端超长阈值（配置未到手即传 null），最后写入权、局部回填和手势几何下沉到领域模块。
- * 访客保留日周切换、浏览和缩放；页头与月历共用同一视图状态。
+ * [INPUT]: 依赖所见版本号和可取消的时段/统计/AI遥测/configuration API（含超长软标记阈值）、Layout 软刷新信号、记录时区与 UTC 当前瞬间、timeline 与 aiTrack 纯函数、日/周时间轴组件及共享编辑确认原语。
+ * [OUTPUT]: 深度工作/大类分布、独立 AI 并行摘要栏（AI 工作总时长、运行墙钟、峰值并发、算力杠杆、休息时运行与指令交互）、来源筛选、具体事项动态分栏日周时间轴、常显视图切换和本人版本编辑。
+ * [POS]: pages 的时间账浏览核心；同时向时间轴下发墙钟当前分钟、绝对当前瞬间、AI 遥测切片与服务端超长阈值（配置未到手即传 null），最后写入权、局部回填和手势几何下沉到领域模块。
+ * 访客保留日周切换、浏览、缩放与受 share_ai_telemetry 控制的只读 AI 双轨展示；页头与月历共用同一视图状态。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
@@ -11,13 +11,14 @@ import type { Dispatch, SetStateAction } from "react";
 import { useOutletContext } from "react-router";
 import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, History, Trash2 } from "lucide-react";
 import { api, ApiError, isAbortError } from "../api/client";
+import { sliceAiDay, summarizeAiRange } from "../lib/aiTrack";
 import { addDays, isoDate, isoMinute, rangeForWeek, recordNow, shiftMinutes } from "../lib/dates";
-import { deriveDayGaps } from "../lib/timeline";
+import { daysInRange, deriveDayGaps } from "../lib/timeline";
 import { TIMELINE_FIT_ZOOM_ID } from "../lib/timelineInteraction";
 import type { TimelineZoomSelection } from "../lib/timelineInteraction";
 import { formatMinutes, NATURE_COLOR, NATURE_LABEL, NATURE_ORDER } from "../lib/nature";
 import {timeGroupColor} from '../lib/time-groups';
-import type { ApiErrorBody, AuditEvent, Category, Configuration, Gap, RangeSummary, Segment } from "../types";
+import type { AiTelemetryRange, ApiErrorBody, AuditEvent, Category, Configuration, Gap, RangeSummary, Segment } from "../types";
 import { useThemeStore } from "../store/theme";
 import { useTimeViewStore } from "../store/timeView";
 import { RevisionHistoryModal } from "../components/RevisionHistoryModal";
@@ -132,7 +133,9 @@ export function DayPage({ recordTimeZone }: { recordTimeZone: string }) {
   const anchorDay = pinnedDay ?? today;
   const [zoomId, setZoomId] = useState<TimelineZoomSelection>(TIMELINE_FIT_ZOOM_ID);
   const [calloutsEnabled, setCalloutsEnabled] = useState(true);
+  const [aiLaneEnabled, setAiLaneEnabled] = useState(true);
   const [segments, setSegments] = useState<Segment[]>([]);
+  const [aiTelemetry, setAiTelemetry] = useState<AiTelemetryRange | null>(null);
   const [summary, setSummary] = useState<RangeSummary | null>(null);
   const [configuration, setConfiguration] = useState<Configuration | null>(null);
   const [loading, setLoading] = useState(true);
@@ -164,13 +167,17 @@ export function DayPage({ recordTimeZone }: { recordTimeZone: string }) {
       const nextRange: [string, string] = viewMode === "day"
         ? [anchorDay, anchorDay]
         : rangeForWeek(anchorDay, config.settings.weekStart);
-      const result = await api.segments(
-        { from: `${nextRange[0]}T00:00`, to: `${addDays(nextRange[1], 1)}T00:00` },
-        { signal },
-      );
+      const [result, nextAi] = await Promise.all([
+        api.segments(
+          { from: `${nextRange[0]}T00:00`, to: `${addDays(nextRange[1], 1)}T00:00` },
+          { signal },
+        ),
+        api.aiRange(nextRange[0], nextRange[1], { signal }).catch(() => null),
+      ]);
       if (signal?.aborted || generation !== loadGeneration.current) return;
       setConfiguration(config);
       setSegments(result.segments);
+      setAiTelemetry(nextAi);
     } catch (caught) {
       if (!isAbortError(caught) && generation === loadGeneration.current) {
         setError(caught instanceof Error ? caught.message : "加载时间账失败。");
@@ -210,6 +217,18 @@ export function DayPage({ recordTimeZone }: { recordTimeZone: string }) {
     void loadSummary(controller.signal);
     return () => controller.abort();
   }, [liveMinute, loadSummary, refreshKey]);
+
+  const rangeDays = useMemo(() => daysInRange(range[0], range[1]), [range]);
+  const aiDay = useMemo(
+    () => (viewMode === "day" ? sliceAiDay(aiTelemetry, range[0], recordTimeZone) : null),
+    [aiTelemetry, range, recordTimeZone, viewMode],
+  );
+  const aiMetrics = useMemo(
+    () => (aiTelemetry
+      ? summarizeAiRange(aiTelemetry, rangeDays, segments, nowMinute, nowUtc, recordTimeZone)
+      : null),
+    [aiTelemetry, nowMinute, nowUtc, rangeDays, recordTimeZone, segments],
+  );
 
   const gaps = useMemo(
     () => viewMode === "day"
@@ -361,7 +380,7 @@ export function DayPage({ recordTimeZone }: { recordTimeZone: string }) {
       {error && <p role="alert" className="text-[13px] leading-5 text-zzm-accent-ink">{error}</p>}
       <Card padding="none" className="flex flex-none flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] leading-5">
-            <span><i className="text-xs not-italic text-muted-foreground">{summary?.groupOnly ? '工作时间' : '有效创作'}</i> <strong className="ml-1 tabular-nums">{formatMinutes(summary?.effectiveWorkMinutes || 0)}</strong></span>
+            <span><i className="text-xs not-italic text-muted-foreground">深度工作</i> <strong className="ml-1 tabular-nums">{formatMinutes(summary?.effectiveWorkMinutes || 0)}</strong></span>
             <span><i className="text-xs not-italic text-muted-foreground">已记录</i> <strong className="ml-1 tabular-nums">{formatMinutes(summary?.recordedMinutes || 0)}</strong></span>
             <span><i className="text-xs not-italic text-muted-foreground">覆盖率</i> <strong className="ml-1 tabular-nums">{((summary?.coverage || 0) * 100).toFixed(1)}%</strong></span>
             <span><i className="text-xs not-italic text-muted-foreground">空白</i> <strong className="ml-1 tabular-nums">{formatMinutes(summary?.gapMinutes || 0)}</strong></span>
@@ -389,6 +408,43 @@ export function DayPage({ recordTimeZone }: { recordTimeZone: string }) {
               </span>
             ))}
           </div>
+          {aiMetrics && aiMetrics.turnCount > 0 && (
+            <div className="flex w-full flex-wrap items-center gap-x-5 gap-y-1 border-t border-border/70 pt-2 text-[12px] leading-5">
+              <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+                <i className="h-2 w-2 rounded-xs bg-[var(--data-4)]" />
+                AI 并行
+              </span>
+              <span title="多 Agent 并行累计有效工时（AI 为你节省的工作时长）">
+                <i className="text-[11.5px] not-italic text-muted-foreground">AI 工作总时长</i>{" "}
+                <strong className="tabular-nums text-[var(--data-4)]">{formatMinutes(aiMetrics.agentMinutes)}</strong>
+              </span>
+              <span title="当天 AI 实际在运行的墙钟时长">
+                <i className="text-[11.5px] not-italic text-muted-foreground">运行墙钟</i>{" "}
+                <strong className="tabular-nums">{formatMinutes(aiMetrics.wallMinutes)}</strong>
+              </span>
+              <span title="同一时刻最多同时运行的 AI 任务数">
+                <i className="text-[11.5px] not-italic text-muted-foreground">峰值并发</i>{" "}
+                <strong className="tabular-nums">×{aiMetrics.peakConcurrency}</strong>
+              </span>
+              <span title="AI 工作总时长 ÷ 运行墙钟">
+                <i className="text-[11.5px] not-italic text-muted-foreground">算力杠杆</i>{" "}
+                <strong className="tabular-nums">{aiMetrics.leverageRatio.toFixed(1)}×</strong>
+              </span>
+              {aiMetrics.backgroundCruiseMinutes > 0 && (
+                <span title="你处于休息、饮食或睡眠等非工作时段时，AI 仍在后台为你运行的时长">
+                  <i className="text-[11.5px] not-italic text-muted-foreground">休息时运行</i>{" "}
+                  <strong className="tabular-nums">{formatMinutes(aiMetrics.backgroundCruiseMinutes)}</strong>
+                </span>
+              )}
+              <span title="当天你向 AI 下达指令或回复确认的次数">
+                <i className="text-[11.5px] not-italic text-muted-foreground">指令交互</i>{" "}
+                <strong className="tabular-nums">{aiMetrics.touchpointCount} 次</strong>
+                {aiMetrics.mobileTouchCount > 0 && (
+                  <span className="text-muted-foreground">（手机 {aiMetrics.mobileTouchCount}）</span>
+                )}
+              </span>
+            </div>
+          )}
       </Card>
       <Card padding="none" className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {loading && <div aria-label="正在读取时间账" className="grid gap-3 p-5"><div className="zzm-skel h-5 w-48" /><div className="zzm-skel h-64" /></div>}
@@ -398,6 +454,9 @@ export function DayPage({ recordTimeZone }: { recordTimeZone: string }) {
             segments={filtered}
             allSegments={segments}
             gaps={owner?gaps:[]}
+            aiDay={aiDay}
+            aiLaneEnabled={Boolean(aiTelemetry) && aiLaneEnabled}
+            onAiLaneEnabledChange={aiTelemetry ? setAiLaneEnabled : undefined}
             readOnly={!owner}
             nowMinute={nowMinute}
             nowUtc={nowUtc}
@@ -418,6 +477,7 @@ export function DayPage({ recordTimeZone }: { recordTimeZone: string }) {
             from={range[0]}
             to={range[1]}
             segments={filtered}
+            aiTelemetry={aiTelemetry}
             nowMinute={nowMinute}
             nowUtc={nowUtc}
             recordTimeZone={recordTimeZone}

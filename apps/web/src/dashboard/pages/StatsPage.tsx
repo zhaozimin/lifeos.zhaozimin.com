@@ -1,22 +1,23 @@
 /**
- * [INPUT]: 依赖可取消的 summary/configuration API、Layout 软刷新信号、App 注入的服务端记录时区、stats 筛选状态机、nature 主题色映射与 EChart 壳。
- * [OUTPUT]: 本人大类分布、仅工作大类的时长和按醒来日期归属的WHOOP实睡KPI。
- * [POS]: pages 的可独立滚动聚合视图；最后一次请求独占写入权，图表只渲染同一范围的服务端统计结果。
+ * [INPUT]: 依赖可取消的 summary/aiRange/configuration API、Layout 软刷新信号、App 注入的服务端记录时区、stats 筛选状态机、aiTrack 切片、nature 主题色映射与 EChart 壳。
+ * [OUTPUT]: 深度工作/大类分布、WHOOP实睡KPI，以及受 share_ai_telemetry 投影开关控制的 Orca AI 工作总时长、算力杠杆、指令交互与人机独立双轨逐日趋势图。
+ * [POS]: pages 的可独立滚动聚合视图；最后一次请求独占写入权，图表只渲染同一范围的服务端统计与 AI 遥测结果。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useOutletContext } from "react-router";
-import { BarChart3, BriefcaseBusiness, Clock3, Layers } from "lucide-react";
+import { Activity, BarChart3, BriefcaseBusiness, Clock3, Cpu, Layers, Sparkles } from "lucide-react";
 import type { EChartsOption } from "echarts";
 import { api, isAbortError } from "../api/client";
+import { formatProviderName, sliceAiDay } from "../lib/aiTrack";
 import { isoDate, isoMinute, rangeForMonth, rangeForWeek, recordNow, selectStatsMode } from "../lib/dates";
 import type { StatsSelection } from "../lib/dates";
 import { formatMinutes, NATURE_LABEL, NATURE_ORDER, readNatureColors } from "../lib/nature";
 import {timeGroupColor} from '../lib/time-groups';
 import { EChart } from "../components/charts/EChart";
 import { useThemeStore } from "../store/theme";
-import type { RangeSummary } from "../types";
+import type { AiTelemetryRange, RangeSummary } from "../types";
 import { Card } from "../components/ui/Card";
 import { KPICard } from "../components/ui/KPICard";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -61,6 +62,7 @@ export function StatsPage({ recordTimeZone }: { recordTimeZone: string }) {
   const [pendingStart, setPendingStart] = useState<string | null>(null);
   const [month, setMonth] = useState(() => dateFromIso(today) ?? new Date());
   const [summary, setSummary] = useState<RangeSummary | null>(null);
+  const [aiTelemetry, setAiTelemetry] = useState<AiTelemetryRange | null>(null);
   const [measure, setMeasure] = useState<"grossMinutes" | "pureMinutes">("pureMinutes");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -110,9 +112,15 @@ export function StatsPage({ recordTimeZone }: { recordTimeZone: string }) {
     const generation = ++summaryGeneration.current;
     setLoading(true);
     setError("");
-    void api.summary(range[0], range[1], { signal: controller.signal })
-      .then((nextSummary) => {
-        if (generation === summaryGeneration.current) setSummary(nextSummary);
+    void Promise.all([
+      api.summary(range[0], range[1], { signal: controller.signal }),
+      api.aiRange(range[0], range[1], { signal: controller.signal }).catch(() => null),
+    ])
+      .then(([nextSummary, nextAi]) => {
+        if (generation === summaryGeneration.current) {
+          setSummary(nextSummary);
+          setAiTelemetry(nextAi);
+        }
       })
       .catch((caught) => {
         if (!isAbortError(caught) && generation === summaryGeneration.current) {
@@ -144,6 +152,57 @@ export function StatsPage({ recordTimeZone }: { recordTimeZone: string }) {
     setPendingStart(null);
   };
   const caption = pendingStart ? `开始：${pendingStart}` : range[0] === range[1] ? range[0] : `${range[0]} 至 ${range[1]}`;
+
+  const aiStats = useMemo(() => {
+    const days = summary?.days || [];
+    let agentMinutes = 0;
+    let wallMinutes = 0;
+    let peakConcurrency = 0;
+    let turnCount = 0;
+    let touchpointCount = 0;
+    let mobileTouchCount = 0;
+    const providerTotals = new Map<string, number>();
+
+    const perDay = days.map((day) => {
+      const slice = sliceAiDay(aiTelemetry, day.date, recordTimeZone);
+      agentMinutes += slice.agentMinutes;
+      wallMinutes += slice.wallMinutes;
+      if (slice.peakConcurrency > peakConcurrency) peakConcurrency = slice.peakConcurrency;
+      turnCount += slice.turnCount;
+      touchpointCount += slice.touchpointCount;
+      mobileTouchCount += slice.mobileTouchCount;
+      for (const [provider, mins] of Object.entries(slice.byProvider)) {
+        providerTotals.set(provider, (providerTotals.get(provider) || 0) + mins);
+      }
+      return {
+        date: day.date,
+        deepWorkMinutes: day.deepWorkMinutes ?? day.effectiveWorkMinutes,
+        lightCollabMinutes: day.lightCollabMinutes ?? 0,
+        agentMinutes: Math.round(slice.agentMinutes),
+        peakConcurrency: slice.peakConcurrency,
+      };
+    });
+
+    const providers = [...providerTotals.entries()]
+      .map(([provider, mins]) => ({ provider, minutes: Math.round(mins) }))
+      .sort((a, b) => b.minutes - a.minutes);
+    const alignments = aiTelemetry?.alignments || [];
+    const roundedAgent = Math.round(agentMinutes);
+    const roundedWall = Math.round(wallMinutes);
+    return {
+      agentMinutes: roundedAgent,
+      wallMinutes: roundedWall,
+      peakConcurrency,
+      leverageRatio: roundedWall > 0 ? Math.round((roundedAgent / roundedWall) * 100) / 100 : 0,
+      turnCount,
+      touchpointCount,
+      mobileTouchCount,
+      autoCalibratedCount: alignments.filter((a) => a.status === "applied").length,
+      conflictCount: alignments.filter((a) => a.status === "conflict").length,
+      providers,
+      perDay,
+    };
+  }, [aiTelemetry, recordTimeZone, summary?.days]);
 
   const natureOption = useMemo<EChartsOption>(() => ({
     tooltip: { trigger: "item", valueFormatter: (value) => formatMinutes(Number(value)) },
@@ -178,6 +237,48 @@ export function StatsPage({ recordTimeZone }: { recordTimeZone: string }) {
     series: [{ type: "line", smooth: true, data: summary?.days.map((day) => day.effectiveWorkMinutes) || [], lineStyle: { color: natureColors.core }, itemStyle: { color: natureColors.core }, areaStyle: { color: natureColors.core, opacity: 0.1 } }],
   }), [summary, natureColors]);
 
+  const dualTrackOption = useMemo<EChartsOption>(() => {
+    const aiColor = resolved === "dark" ? "#a68ec7" : "#8a73a8";
+    return {
+      tooltip: { trigger: "axis", valueFormatter: (value) => formatMinutes(Number(value)) },
+      legend: { bottom: 0 },
+      grid: { left: 54, right: 54, top: 24, bottom: 48 },
+      xAxis: {
+        type: "category",
+        data: aiStats.perDay.map((d) => d.date.slice(5)),
+        axisLabel: { rotate: aiStats.perDay.length > 14 ? 35 : 0 },
+      },
+      yAxis: [
+        { type: "value", name: "深度工作", axisLabel: { formatter: (v: number) => formatMinutes(v) } },
+        { type: "value", name: "AI 工作总时长", axisLabel: { formatter: (v: number) => formatMinutes(v) } },
+      ],
+      series: [
+        {
+          name: "深度工作",
+          type: "bar",
+          barMaxWidth: 22,
+          data: aiStats.perDay.map((d) => d.deepWorkMinutes),
+          itemStyle: { color: natureColors.core },
+        },
+        {
+          name: "AI 工作总时长",
+          type: "line",
+          yAxisIndex: 1,
+          smooth: true,
+          data: aiStats.perDay.map((d) => d.agentMinutes),
+          lineStyle: { color: aiColor, width: 2.2 },
+          itemStyle: { color: aiColor },
+        },
+      ],
+    };
+  }, [aiStats.perDay, natureColors.core, resolved]);
+
+  const workHelper = summary?.groupOnly ? "仅统计个人深度工作大类 · 与 AI 独立并行" : "核心创作纯时间";
+  const topProvider = aiStats.providers[0];
+  const topProviderShare = topProvider && aiStats.agentMinutes > 0
+    ? Math.round((topProvider.minutes / aiStats.agentMinutes) * 100)
+    : 0;
+
   return <div className="pb-6">
     <div className="space-y-6">
     <SidebarSlot summary={caption}>
@@ -197,17 +298,58 @@ export function StatsPage({ recordTimeZone }: { recordTimeZone: string }) {
     <PageHeader label="Time · Statistics" title="时间统计" note={`${range[0]} 至 ${range[1]}`} actions={<SegmentedSwitch ariaLabel="时间口径" value={measure} onChange={setMeasure} options={MEASURE_OPTIONS} />} />
     {error && <p role="alert" className="text-[13px] leading-5 text-zzm-accent-ink">{error}</p>}
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KPICard label={summary?.groupOnly ? '工作时间' : '有效工作时间'} value={formatMinutes(summary?.effectiveWorkMinutes || 0)} helper={summary?.groupOnly ? '仅工作大类 · 纯时间' : '核心创作纯时间'} emphasis="primary" icon={<Clock3 size={16} strokeWidth={1.5} />} />
+      <KPICard label="深度工作" value={formatMinutes(summary?.effectiveWorkMinutes || 0)} helper={workHelper} emphasis="primary" icon={<Clock3 size={16} strokeWidth={1.5} />} />
       {summary?.groupOnly ? <KPICard label="WHOOP睡眠" value={summary.sleepAuthority && summary.sleepAuthority.nights+summary.sleepAuthority.naps>0 ? formatMinutes(summary.sleepAuthority.sleepMinutes) : '待同步'} helper={`按醒来日期 · ${summary.sleepAuthority?.nights || 0}晚 / ${summary.sleepAuthority?.naps || 0}次午睡`} icon={<BriefcaseBusiness size={16} strokeWidth={1.5} />} /> : <KPICard label="工作总时间" value={formatMinutes(summary?.grossWorkMinutes || 0)} helper="核心创作 + 事务支撑毛时间" icon={<BriefcaseBusiness size={16} strokeWidth={1.5} />} />}
       <KPICard label="覆盖率" value={`${((summary?.coverage || 0) * 100).toFixed(1)}%`} helper={`${formatMinutes(summary?.recordedMinutes || 0)} 已记录`} icon={<Layers size={16} strokeWidth={1.5} />} />
       {summary?.groupOnly ? <KPICard label="娱乐时间" value={formatMinutes(summary.byCategory.find(r=>r.name==='娱乐')?.pureMinutes || 0)} helper="包含刷手机及睡眠首尾推定" emphasis="subtle" icon={<BarChart3 size={16} strokeWidth={1.5} />} /> : <KPICard label="扣除时间" value={formatMinutes(summary?.deductionMinutes || 0)} helper="记录内未投入主活动的时间" emphasis="subtle" icon={<BarChart3 size={16} strokeWidth={1.5} />} />}
     </div>
     {summary?.groupOnly && <div className="rounded-lg border border-border bg-zzm-fill px-4 py-3 text-[12.5px] leading-5 text-muted-foreground">睡眠时长采用WHOOP浅睡、深睡和REM合计，夜间清醒不算睡眠。首尾差额按你的规则推定为刷手机。<br/>睡眠卡片按醒来日期统计；下方时间分布按实际时间跨午夜切分。{summary.sleepAuthority?.pending ? ` 另有${summary.sleepAuthority.pending}条手报睡眠等待设备校准。` : ''}{summary.sleepAuthority?.conflicts ? ` ${summary.sleepAuthority.conflicts}次校准遇到后续修改，原修改已保留，待核对。` : ''}</div>}
+
+    {aiStats.turnCount > 0 && (
+      <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <KPICard
+            label="AI 工作总时长"
+            value={formatMinutes(aiStats.agentMinutes)}
+            helper={`AI 为你分担的累计工时 · ${aiStats.turnCount} 轮次`}
+            icon={<Cpu size={16} strokeWidth={1.5} />}
+          />
+          <KPICard
+            label="算力杠杆"
+            value={`${aiStats.leverageRatio.toFixed(2)}×`}
+            helper={`运行墙钟 ${formatMinutes(aiStats.wallMinutes)} · 峰值 ×${aiStats.peakConcurrency}`}
+            icon={<Activity size={16} strokeWidth={1.5} />}
+          />
+          <KPICard
+            label="指令交互"
+            value={`${aiStats.touchpointCount} 次`}
+            helper={`本机 ${Math.max(0, aiStats.touchpointCount - aiStats.mobileTouchCount)} 次 · 手机遥控 ${aiStats.mobileTouchCount} 次`}
+            emphasis="subtle"
+            icon={<Sparkles size={16} strokeWidth={1.5} />}
+          />
+          <KPICard
+            label="主力模型生态"
+            value={topProvider ? `${formatProviderName(topProvider.provider)} ${topProviderShare}%` : "—"}
+            helper={aiStats.providers.slice(0, 3).map((p) => `${formatProviderName(p.provider)} ${formatMinutes(p.minutes)}`).join(" · ") || "暂无记录"}
+            emphasis="subtle"
+            icon={<BarChart3 size={16} strokeWidth={1.5} />}
+          />
+        </div>
+        <Card padding="md">
+          <h2 className="text-title-lg">人机双轨：深度工作 vs AI 工作总时长</h2>
+          <p className="text-caption mt-1">
+            左轴为个人「深度工作」时长，右轴叠加 Orca 多 Agent 累计「AI 工作总时长」（两条轨道完全独立，互不改写休息时段）
+          </p>
+          <EChart option={dualTrackOption} className="mt-3 h-[330px]" />
+        </Card>
+      </div>
+    )}
+
     <div className="grid gap-4 lg:grid-cols-2">
       <Card padding="md"><h2 className="text-title-lg">{summary?.groupOnly ? '大类分布' : '性质分布'}</h2><p className="text-caption mt-1">{summary?.groupOnly ? '按本人整理的大类' : '固定四类'} · {measure === "pureMinutes" ? "纯时间" : "毛时间"}</p><EChart option={natureOption} className="mt-3 h-[340px]" /></Card>
       <Card padding="md"><h2 className="text-title-lg">{summary?.groupOnly ? '大类明细' : '分类分布'}</h2><p className="text-caption mt-1">{summary?.groupOnly ? '不再拆分细类' : '按写入时的分类快照汇总'}</p><EChart option={categoryOption} className="mt-3 h-[340px]" /></Card>
     </div>
-    <Card padding="md"><h2 className="text-title-lg">逐日工作时间</h2><p className="text-caption mt-1">{summary?.groupOnly ? '只统计工作大类，学习成长和出行不混入工作' : '每日 core 纯时间'}</p><EChart option={lineOption} className="mt-3 h-[330px]" /></Card>
+    <Card padding="md"><h2 className="text-title-lg">逐日深度工作</h2><p className="text-caption mt-1">{summary?.groupOnly ? '只统计深度工作大类，休息与娱乐保持原样' : '每日 core 纯时间'}</p><EChart option={lineOption} className="mt-3 h-[330px]" /></Card>
     {loading && <div aria-label="正在读取统计" className="zzm-skel h-1" />}
     </div>
   </div>;

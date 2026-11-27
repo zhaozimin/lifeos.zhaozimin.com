@@ -14,6 +14,7 @@ whoop-sleep-transitions.test.mjs: 0030过渡规则回归；验证邻近短空白
 inspirations.test.mjs: 0031灵感记录回归；验证严格两层标签约束、微信双保险提交、因果撤销、AAL2编辑合并与匿名零权限。
 morning-time-audit.test.mjs: 0033晨间巡检与纠错加固回归；验证空time_replacements容错、昨日空白与超长阈值巡检、跨夜洗漱截断识别、合体晨报与对话闭环。
 steward-overlap-and-sleep-snap.test.mjs: 0034回归；验证同活动闭合去重防伪重叠、60秒WHOOP睡眠边界吸附、进行中并发修改历史与权限隔离。
+orca-ai-alignment.test.mjs: 0035回归；验证双信号AI轻度协同自动切分、后台放飞与孤立触点免疫、手动修改conflict保护与AAL2边界。
 rehearse-time-groups.mjs: 私有真实快照演练；核对全量大类、WHOOP实睡、来源保真和重复同步。
 rehearse-history.mjs: 私有迁移演练；临时数据库验证真实快照、重复导入及人工修改保留。
 

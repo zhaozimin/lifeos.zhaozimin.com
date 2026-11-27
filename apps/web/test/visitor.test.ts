@@ -56,3 +56,25 @@ test('公开Logo固定代理图标，不能转发Cookie或任意目标',async()=
  const r=await f.worker.fetch(req('/api/visitor/subscriptions/logo/'+'a'.repeat(24)),{...env,SUBSCRIPTIONS:{fetch:async request=>{seen=request;return new Response('png',{headers:{'Content-Type':'image/png','Set-Cookie':'PRIVATE'}});}}});
  assert.equal(r.status,200);assert.equal(seen?.url,'https://subos.internal/v1/visitor/logo/'+'a'.repeat(24));assert.equal(seen?.headers.get('Cookie'),null);assert.equal(r.headers.get('Set-Cookie'),null);
 });
+test('访客 AI 遥测走匿名投影并严格白名单过滤 system_tags',async()=>{
+ const calls:any[]=[];
+ const client={auth:{setSession:async()=>{throw new Error('NO_OWNER');}},from:()=>{throw new Error('NO_TABLES');},
+  rpc:async(name:string,args:any)=>{
+   calls.push({name,args});
+   if(name==='visitor_orca_ai_range')return {error:null,data:{from:args.p_from,to:args.p_to,turns:[{id:'t1',provider:'claude',model:'claude-opus-4-6',reasoningEffort:'high',projectLabel:'lifeos.zhaozimin'}],touchpoints:[],alignments:[]}};
+   if(name==='visitor_time')return {error:null,data:{categories:[{id:1,name:'工作',nature:'core',code:'work',is_active:true}],entries:[{id:'e1',start_at:'2026-11-27T01:00:00Z',end_at:'2026-11-27T01:30:00Z',category_id:1,activity:'AI轻度协同',deduction_minutes:0,source:'orca',system_tags:['ai-collab','orca-auto','PRIVATE-CANARY'],tags:['PRIVATE-CANARY'],note:'PRIVATE-CANARY'}]}};
+   return {error:null,data:null};
+  }};
+ const worker=createWorker((()=>client) as unknown as ClientFactory);
+ const aiRes=await worker.fetch(req('/api/visitor/native',{method:'GET',path:'/v1/time/ai',params:{from:'2026-11-27',to:'2026-11-27',owner:'attacker'}}),env);
+ assert.equal(aiRes.status,200);
+ const aiBody=await aiRes.json() as any;
+ assert.equal(aiBody.turns[0].reasoningEffort,'high');
+ assert.deepEqual(calls[0],{name:'visitor_orca_ai_range',args:{p_from:'2026-11-27',p_to:'2026-11-27'}});
+ const segRes=await worker.fetch(req('/api/visitor/native',{method:'GET',path:'/v1/time/segments',params:{from:'2026-11-27T00:00',to:'2026-11-28T00:00'}}),env);
+ assert.equal(segRes.status,200);
+ const segText=await segRes.text();
+ assert.ok(!segText.includes('PRIVATE-CANARY'));
+ const segBody=JSON.parse(segText);
+ assert.deepEqual(segBody.segments[0].tags,['ai-collab','orca-auto']);
+});

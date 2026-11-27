@@ -14,7 +14,7 @@ theme/: 纸墨朱单一主题的画布实色与哑光数据色；界面色经 in
 lib/: 原版日期、导出与时间轴纯函数。
 store/: 浏览器外观偏好；不保存认证令牌。
 api/: 本人 Cookie 传输与云端数据契约。
-types.ts: 大类统计、WHOOP睡眠权威来源、时间段与修改痕迹类型。
-index.css: 导入锁版本 zzm.css，把 shadcn 语义变量桥接到 --zzm-*，定义字阶、数据色与弹层动效。
+types.ts: 大类统计、心流/轻度协同拆分、WHOOP睡眠权威来源、Orca AI 遥测、时间段与修改痕迹类型。
+index.css: 导入锁版本 zzm.css、timeline.css 与 timeline-ai.css，把 shadcn 语义变量桥接到 --zzm-*，定义字阶、数据色与弹层动效。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

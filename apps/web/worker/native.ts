@@ -319,6 +319,21 @@ export async function native(client: SupabaseClient, input: unknown) {
     }
     return summary;
   }
+  if (method === "GET" && path === "/v1/time/ai") {
+    const from = date(params.from),
+      to = date(params.to);
+    if (to < from || daysBetween(from, to) > 366)
+      throw new HttpError(400, "请选择不超过一年的范围");
+    const { data, error } = await client.rpc("get_orca_ai_range", {
+      p_from: from,
+      p_to: to,
+    });
+    if (error) {
+      // 0035 迁移尚未上线或演示未启用时平滑返回空轨道，绝不阻断主时间轴。
+      return { from, to, turns: [], touchpoints: [], alignments: [] };
+    }
+    return data || { from, to, turns: [], touchpoints: [], alignments: [] };
+  }
   if (method === "GET" && path === "/v1/time/audit/events")
     return nativeAudits(client, "time");
   const segment = /^\/v1\/time\/segments(?:\/([0-9a-f-]{36}))?$/.exec(path);

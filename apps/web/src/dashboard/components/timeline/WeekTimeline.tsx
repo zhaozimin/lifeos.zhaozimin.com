@@ -1,13 +1,16 @@
 /**
- * [INPUT]: 依赖一周 Segment、记录时区墙钟与 UTC 当前瞬间、DST 感知跨日裁剪、整屏/五档缩放、nature 调色板与 TimelineEvent。
- * [OUTPUT]: 对外提供共享 24h 墙钟比例尺、七个日期列、UTC 真实时长、折叠片段保守投影和当前时刻线。
+ * [INPUT]: 依赖一周 Segment、可选一周 AI 遥测、记录时区墙钟与 UTC 当前瞬间、DST 感知跨日裁剪、整屏/五档缩放、nature 调色板、TimelineEvent 与 AiTrackPopover。
+ * [OUTPUT]: 对外提供共享 24h 墙钟比例尺、七个日期列、UTC 真实时长、折叠片段保守投影、周视图右侧可悬停 AI 并发边带（鼠标旁模型/推理强度浮层）与峰值徽标及当前时刻线。
  * [POS]: components/timeline 的周视图编排器；复用日视图 UTC/墙钟分层和事项原语，但因七列密度不启用细节栏与直接调时。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import type { Nature, Segment } from "../../types";
+import type { AiTelemetryRange, Nature, Segment } from "../../types";
+import { sliceAiDay } from "../../lib/aiTrack";
+import type { AiActivityCluster, AiConcurrencyBand } from "../../lib/aiTrack";
+import { formatMinutes } from "../../lib/nature";
 import { daysInRange, isSegmentOverlong, sliceSegmentForDay } from "../../lib/timeline";
 import { minuteOfDay } from "../../lib/dates";
 import {
@@ -17,6 +20,7 @@ import {
 } from "../../lib/timelineInteraction";
 import type { TimelineZoomSelection } from "../../lib/timelineInteraction";
 import { TimelineZoomControl } from "../ui/TimelineCanvas";
+import { AiTrackPopover } from "./AiModelMeta";
 import { TimelineEvent } from "./TimelineEvent";
 
 const WEEKDAY = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -34,6 +38,7 @@ export function WeekTimeline({
   from,
   to,
   segments,
+  aiTelemetry = null,
   nowMinute,
   nowUtc,
   recordTimeZone,
@@ -46,6 +51,7 @@ export function WeekTimeline({
   from: string;
   to: string;
   segments: Segment[];
+  aiTelemetry?: AiTelemetryRange | null;
   nowMinute: string;
   nowUtc: string;
   recordTimeZone: string;
@@ -58,12 +64,27 @@ export function WeekTimeline({
 }) {
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<{
+    band: AiConcurrencyBand;
+    cluster: AiActivityCluster | null;
+    x: number;
+    y: number;
+  } | null>(null);
   const fitHeight = viewportHeight === null ? null : Math.max(1, viewportHeight - WEEK_HEAD_HEIGHT);
   const zoom = resolveTimelineZoom(zoomId, fitHeight);
   const dayHeight = 1440 * zoom.pixelsPerMinute;
-  const days = daysInRange(from, to);
+  const days = useMemo(() => daysInRange(from, to), [from, to]);
   const today = nowMinute.slice(0, 10);
   const nowTop = minuteOfDay(nowMinute) * zoom.pixelsPerMinute;
+
+  const aiByDay = useMemo(
+    () => new Map(days.map((day) => [day, aiTelemetry ? sliceAiDay(aiTelemetry, day, recordTimeZone) : null])),
+    [aiTelemetry, days, recordTimeZone],
+  );
+  const hasAnyAi = useMemo(
+    () => [...aiByDay.values()].some((slice) => slice && slice.bands.length > 0),
+    [aiByDay],
+  );
 
   useEffect(() => {
     if (!viewport || typeof ResizeObserver === "undefined") return;
@@ -78,19 +99,33 @@ export function WeekTimeline({
   return (
     <div className="timeos-week-frame" data-zoom={zoomId}>
       <div className="timeos-timeline-toolbar">
-        <span className="timeos-timeline-toolbar__hint">七日共享同一真实比例尺</span>
+        <span className="timeos-timeline-toolbar__hint">
+          {hasAnyAi ? "七日共享同一真实比例尺 · 悬停列右侧 AI 边带查看模型与推理详情" : "七日共享同一真实比例尺"}
+        </span>
         <TimelineZoomControl value={zoomId} options={ZOOM_OPTIONS} onChange={onZoomChange} />
       </div>
       <div ref={setViewport} className="timeos-week-scroll">
         <div className="timeos-week-view">
           <div className="timeos-week-head">
             <span aria-hidden="true" />
-            {days.map((day) => (
-              <div key={day} className={day === today ? "is-today" : ""}>
-                <strong>{day.slice(8)}</strong>
-                <span>{weekday(day)}</span>
-              </div>
-            ))}
+            {days.map((day) => {
+              const aiDay = aiByDay.get(day);
+              return (
+                <div key={day} className={day === today ? "is-today" : ""}>
+                  <strong>{day.slice(8)}</strong>
+                  <span>{weekday(day)}</span>
+                  {aiDay && aiDay.peakConcurrency > 0 && (
+                    <span
+                      className="timeos-week-ai-badge"
+                      data-peak={aiDay.peakConcurrency >= 5 ? "high" : undefined}
+                      title={`Orca AI 算力 ${formatMinutes(Math.round(aiDay.agentMinutes))} · 峰值 ×${aiDay.peakConcurrency}`}
+                    >
+                      AI ×{aiDay.peakConcurrency}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div
             className="timeos-week-grid"
@@ -114,6 +149,8 @@ export function WeekTimeline({
               })}
             </div>
             {days.map((day) => {
+              const aiDay = aiByDay.get(day);
+              const dayHasAi = Boolean(aiDay && aiDay.bands.length > 0);
               const slices = segments
                 .map((segment) => ({
                   segment,
@@ -141,11 +178,34 @@ export function WeekTimeline({
                         top: slice.startMinute * zoom.pixelsPerMinute,
                         height: Math.max(1, (slice.endMinute - slice.startMinute) * zoom.pixelsPerMinute),
                         left: 4,
-                        right: 4,
+                        right: dayHasAi ? 10 : 4,
                       }}
                       onEdit={onEdit}
                     />
                   ))}
+                  {dayHasAi && aiDay && (
+                    <div className="timeos-week-ai-ribbon">
+                      {aiDay.bands.map((band) => {
+                        const cluster = aiDay.clusters.find((c) => c.id === band.clusterId) ?? null;
+                        const active = hovered?.band.id === band.id;
+                        return (
+                          <span
+                            key={band.id}
+                            className="timeos-week-ai-band"
+                            data-level={band.level}
+                            data-active={active || undefined}
+                            style={{
+                              top: band.startMinute * zoom.pixelsPerMinute,
+                              height: Math.max(3, (band.endMinute - band.startMinute) * zoom.pixelsPerMinute),
+                            }}
+                            onPointerEnter={(event) => setHovered({ band, cluster, x: event.clientX, y: event.clientY })}
+                            onPointerMove={(event) => setHovered({ band, cluster, x: event.clientX, y: event.clientY })}
+                            onPointerLeave={() => setHovered((cur) => (cur?.band.id === band.id ? null : cur))}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
                   {day === today && (
                     <div
                       className="timeos-now-line"
@@ -159,6 +219,15 @@ export function WeekTimeline({
           </div>
         </div>
       </div>
+      {hovered && (
+        <AiTrackPopover
+          band={hovered.band}
+          cluster={hovered.cluster}
+          x={hovered.x}
+          y={hovered.y}
+        />
+      )}
     </div>
   );
 }
+

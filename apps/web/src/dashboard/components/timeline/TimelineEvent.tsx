@@ -1,6 +1,6 @@
 /**
- * [INPUT]: 依赖 Segment 领域对象、裁剪后的墙上时间、父级算好的绝对布局与超长软标记判定、lib/timeline 的标记文案与设计系统 TimelineEventFrame。
- * [OUTPUT]: 日周事项映射；区分WHOOP与AI来源，呈现标题、时间、备注和控制柄。
+ * [INPUT]: 依赖 Segment 领域对象、裁剪后的墙上时间、父级算好的绝对布局与超长软标记判定、可选分栏位（full/me）、lib/timeline 的标记文案及设计系统 TimelineEventFrame。
+ * [OUTPUT]: 日周事项映射；区分 WHOOP 校准与普通来源，呈现标题、时间、备注、分栏态和控制柄。
  * [POS]: components/timeline 的事项适配器；把领域文案映射到设计系统原语，不计算时间边界、不判定超长、不定义视觉样式。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -29,6 +29,7 @@ export function TimelineEvent({
   color,
   style,
   variant,
+  splitLane = "full",
   onEdit,
   actionProps,
   selected = false,
@@ -44,6 +45,7 @@ export function TimelineEvent({
   color: string;
   style: CSSProperties;
   variant: "day" | "week";
+  splitLane?: "full" | "me";
   onEdit: (segment: Segment) => void;
   actionProps?: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "type">;
   selected?: boolean;
@@ -55,6 +57,7 @@ export function TimelineEvent({
   const note = segment.note?.trim();
   const project = segment.projectName?.trim();
   const endLabel = segment.endedAt ? end.slice(11) : "进行中";
+  const sourceLabel = SOURCE_LABEL[segment.source];
   // 软标记走既有 meta 行（同一套点分中文短语与 muted 语义色），只前置一段提示文字；
   // 色块、时长、标题一律照常呈现，不隐藏也不灰化——记录不评判。
   const meta = [
@@ -62,8 +65,12 @@ export function TimelineEvent({
     `${start.slice(11)}–${endLabel}`,
     segment.category.name,
     project,
-    SOURCE_LABEL[segment.source],
-    segment.tags.includes('whoop-phone-estimate') ? '刷手机按本人规则推定' : segment.tags.includes('whoop-pending') ? '等待WHOOP' : undefined,
+    sourceLabel,
+    segment.tags.includes("whoop-phone-estimate")
+      ? "刷手机按本人规则推定"
+      : segment.tags.includes("whoop-pending")
+        ? "等待WHOOP"
+        : undefined,
   ].filter(Boolean).join(" · ");
   const label = [
     segment.title,
@@ -76,6 +83,7 @@ export function TimelineEvent({
     <TimelineEventFrame
       variant={variant}
       timelineColor={color}
+      splitLane={splitLane}
       className={segment.endedAt ? undefined : "timeos-breathe"}
       style={style}
       selected={selected}

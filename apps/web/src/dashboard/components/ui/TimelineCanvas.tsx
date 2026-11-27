@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 React 受控属性、clsx、lucide 图标，以及调用方映射好的分钟几何和交互回调。
- * [OUTPUT]: 对外提供时间轴缩放、可扩展五列日画布、细节标签/引导线、时间刻度、分布块、事项块、当前线与缩放手柄设计系统原语。
+ * [OUTPUT]: 对外提供时间轴缩放、五列日画布（支持具体事项栏内动态拆分为「我自己 | AI 并行」）、细节标签/引导线、时间刻度、分布块、事项块（支持 AI 轻度协同斜纹态与左半栏分栏态）、当前线与缩放手柄设计系统原语。
  * [POS]: components/ui 的时间画布视觉与结构真源；领域组件只映射记录数据、整数分钟和持久化行为，短块可读性由细节栏承接。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -157,6 +157,7 @@ export interface TimelineDayFrameProps
   detailsAriaLabel?: string;
   axis?: ReactNode;
   distribution?: ReactNode;
+  aiSplitActive?: boolean;
   children?: ReactNode;
   overlay?: ReactNode;
   callouts?: ReactNode;
@@ -180,6 +181,7 @@ export function TimelineDayFrame({
   detailsAriaLabel = "具体事项",
   axis,
   distribution,
+  aiSplitActive = false,
   children,
   overlay,
   callouts,
@@ -215,10 +217,26 @@ export function TimelineDayFrame({
       style={timelineStyle}
       {...rest}
     >
-      <div className="timeos-day-head text-caption-uppercase" data-callouts={calloutsEnabled ? "on" : "off"} aria-hidden="true">
+      <div
+        className="timeos-day-head text-caption-uppercase"
+        data-callouts={calloutsEnabled ? "on" : "off"}
+        data-ai-split={aiSplitActive ? "on" : "off"}
+        aria-hidden="true"
+      >
         <span>时间</span>
         <span>分布</span>
-        <span>具体事项</span>
+        {aiSplitActive ? (
+          <div className="timeos-day-head__split">
+            <span className="timeos-day-head__lane timeos-day-head__lane--me">
+              具体事项 · 我自己
+            </span>
+            <span className="timeos-day-head__lane timeos-day-head__lane--ai">
+              AI 并行
+            </span>
+          </div>
+        ) : (
+          <span>具体事项</span>
+        )}
         {calloutsEnabled && <span aria-hidden="true" />}
         {calloutsEnabled && <span>细节</span>}
       </div>
@@ -230,7 +248,11 @@ export function TimelineDayFrame({
         onScroll={onViewportScroll}
         onWheel={onViewportWheel}
       >
-        <div className="timeos-day-grid" data-callouts={calloutsEnabled ? "on" : "off"}>
+        <div
+          className="timeos-day-grid"
+          data-callouts={calloutsEnabled ? "on" : "off"}
+          data-ai-split={aiSplitActive ? "on" : "off"}
+        >
           {axis ?? (
             <TimelineTimeAxis
               dayMinutes={safeDayMinutes}
@@ -322,6 +344,7 @@ export interface TimelineDistributionBlockProps
     TimelineFrameState {
   variant?: "activity" | "gap";
   timelineColor?: string;
+  aiCollab?: boolean;
   actionProps?: TimelineActionProps;
   handles?: ReactNode;
   children?: ReactNode;
@@ -334,6 +357,7 @@ export const TimelineDistributionBlock = forwardRef<
   {
     variant = "activity",
     timelineColor,
+    aiCollab = false,
     selected = false,
     gesture = "idle",
     canMove = false,
@@ -357,6 +381,7 @@ export const TimelineDistributionBlock = forwardRef<
         className,
       )}
       style={interactionStyle(style, timelineColor, longPressDurationMs)}
+      data-ai-collab={aiCollab || undefined}
       data-selected={selected || undefined}
       data-gesture={gesture}
       data-can-move={canMove || undefined}
@@ -386,6 +411,8 @@ export interface TimelineEventFrameProps
     TimelineFrameState {
   variant: "day" | "week";
   timelineColor: string;
+  aiCollab?: boolean;
+  splitLane?: "full" | "me";
   actionProps: TimelineActionProps;
   handles?: ReactNode;
   children: ReactNode;
@@ -396,6 +423,8 @@ export const TimelineEventFrame = forwardRef<HTMLDivElement, TimelineEventFrameP
     {
       variant,
       timelineColor,
+      aiCollab = false,
+      splitLane = "full",
       selected = false,
       gesture = "idle",
       canMove = false,
@@ -419,6 +448,8 @@ export const TimelineEventFrame = forwardRef<HTMLDivElement, TimelineEventFrameP
           className,
         )}
         style={interactionStyle(style, timelineColor, longPressDurationMs)}
+        data-ai-collab={aiCollab || undefined}
+        data-split={splitLane === "me" ? "me" : undefined}
         data-selected={selected || undefined}
         data-gesture={gesture}
         data-can-move={canMove || undefined}

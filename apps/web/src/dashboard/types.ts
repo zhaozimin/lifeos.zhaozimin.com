@@ -108,6 +108,8 @@ export interface Configuration {
 export interface DaySummary {
   date: string;
   effectiveWorkMinutes: number;
+  deepWorkMinutes?: number;
+  lightCollabMinutes?: number;
   grossMinutes: number;
   recordedMinutes: number;
   gapMinutes: number;
@@ -124,12 +126,61 @@ export interface RangeSummary {
   byCategory: Array<{ name: string; nature: Nature; grossMinutes: number; pureMinutes: number; segmentCount: number }>;
   byProject: Array<{ projectName: string; grossMinutes: number; pureMinutes: number; segmentCount: number }>;
   effectiveWorkMinutes: number;
+  deepWorkMinutes?: number;
+  lightCollabMinutes?: number;
   grossWorkMinutes: number;
   recordedMinutes: number;
   gapMinutes: number;
   deductionMinutes: number;
   coverage: number;
   days: DaySummary[];
+}
+
+export interface AiTurn {
+  id: string;
+  source: "orca_native" | "claude_cli" | "codex_cli" | "opencode" | string;
+  provider: string;
+  sessionKey: string;
+  projectLabel: string | null;
+  model: string | null;
+  reasoningEffort?: string | null;
+  startedUtc: string;
+  endedUtc: string;
+  activeMs: number;
+  waitHumanMs: number;
+  toolCallCount: number;
+  subagentCount: number;
+  outcome: string | null;
+}
+
+export interface AiTouchpoint {
+  id: string;
+  occurredUtc: string;
+  kind: "user_prompt" | "approval_reply" | "question_reply" | string;
+  deviceOrigin: "host" | "mobile" | "unknown";
+  provider: string;
+  sessionKey: string;
+}
+
+export interface AiAlignment {
+  clusterKey: string;
+  status: "applied" | "conflict" | "dismissed";
+  localDate: string;
+  startUtc: string;
+  endUtc: string;
+  touchpointCount: number;
+  mobileTouchCount: number;
+  peakConcurrency: number;
+  agentMinutes: number;
+  reason: string | null;
+}
+
+export interface AiTelemetryRange {
+  from: string;
+  to: string;
+  turns: AiTurn[];
+  touchpoints: AiTouchpoint[];
+  alignments: AiAlignment[];
 }
 
 export interface Gap {

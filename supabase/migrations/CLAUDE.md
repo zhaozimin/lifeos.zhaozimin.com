@@ -39,5 +39,7 @@
 0032_visitor_inspirations.sql: 灵感公开可抓取投影；visitor_settings 新增 share_inspirations 开关（默认 false），提供按上海自然日与两层标签筛选的零私密字段只读 RPC。
 0033_morning_time_audit.sql: 微信纠错空替换字段容错、昨日时间轴异常巡检（空白、未闭合、睡前截断及洗漱35/洗澡50/吃饭90分钟超时）、合体WHOOP晨报（放宽至16:00）与已投递晨报进入最近对话。
 0034_steward_overlap_and_sleep_snap.sql: 微信计时同活动闭合去重防伪重叠、区间替换60秒WHOOP睡眠边界自动吸附；支持进行中并发无损修改临睡历史时段。
+0035_orca_ai_alignment.sql: Orca AI 算力轮次、本机/手机触点与时间自动校对台账；均衡模式双信号无损切分休息中的 AI 轻度协同，保留手动修改 conflict 保护与本人 AAL2 只读隔离。
+0036_visitor_orca_ai.sql: 访客 AI 双轨公开投影；visitor_settings 新增 share_ai_telemetry（默认 false），提供 visitor_orca_ai_range 并在开关开启时于 visitor_time 仅透出 ai-collab/orca-auto 白名单系统标记。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

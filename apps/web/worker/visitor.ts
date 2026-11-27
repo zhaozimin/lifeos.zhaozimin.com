@@ -11,7 +11,8 @@ import {toSegment,timeSummary} from './native-data';
 import {today,bounds,validDay,daysBetween} from '../src/model';
 import {visitorFinance} from './visitor-finance';
 import {visitorInspirationsResponse} from './visitor-inspirations';
-const nativeInput=z.object({method:z.literal('GET'),path:z.enum(['/v1/health','/v1/time/configuration','/v1/time/segments','/v1/time/summary/range','/v1/fin/configuration','/v1/fin/transactions','/v1/fin/budget/status']),params:z.record(z.string(),z.unknown()).default({})}).strict();
+const nativeInput=z.object({method:z.literal('GET'),path:z.enum(['/v1/health','/v1/time/configuration','/v1/time/segments','/v1/time/summary/range','/v1/time/ai','/v1/fin/configuration','/v1/fin/transactions','/v1/fin/budget/status']),params:z.record(z.string(),z.unknown()).default({})}).strict();
+const PUBLIC_SYSTEM_TAGS=new Set(['ai-collab','orca-auto']);
 const catalog=z.object({items:z.array(z.object({id:z.string().regex(/^[a-f0-9]{24}$/),logoSrc:z.string().regex(/^\/api\/visitor\/subscriptions\/logo\/[a-f0-9]{24}$/),name:z.string().max(100),category:z.string().max(100),cycle:z.string().max(30),status:z.enum(['active','paused','ended','cancelled','expired']),renewalDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/)}).strict()).max(500)}).strict();
 async function rpc(client:SupabaseClient,name:string,args:Record<string,unknown>){
  const {data,error}=await client.rpc(name,args);
@@ -54,6 +55,11 @@ export async function visitor(client:SupabaseClient,env:Env,url:URL,method:strin
  const {path:route,params}=value.data;
  if(route.startsWith('/v1/fin/'))return visitorFinance(client,route,params);
  if(route==='/v1/health')return {status:'ok',version:'LifeOS 访客',timezone:'Asia/Shanghai',resolvedTimezone:'Asia/Shanghai',timezoneSource:'config'};
+ if(route==='/v1/time/ai'){
+  const a=String(params.from||''),b=String(params.to||'');
+  if(!validDay(a)||!validDay(b)||b<a||daysBetween(a,b)>366)throw new HttpError(400,'请选择一年以内的有效日期。');
+  return await rpc(client,'visitor_orca_ai_range',{p_from:a,p_to:b});
+ }
  const day=today();let from:string,to:string;
  if(route==='/v1/time/summary/range'){
   const a=String(params.from||''),b=String(params.to||'');
@@ -69,7 +75,10 @@ export async function visitor(client:SupabaseClient,env:Env,url:URL,method:strin
  const data=await rpc(client,'visitor_time',{p_from:from,p_to:to});
  if(route==='/v1/time/configuration')return {categories:data.categories.map((c:any)=>({...c,keywords:[],builtin:false,protected:true})),
   projects:[],natures:['core','support','recovery','leisure'],settings:{weekStart:'monday'},timezone:'Asia/Shanghai',resolvedTimezone:'Asia/Shanghai',timezoneSource:'config',currentSystemTimezone:null,overlongSegmentMinutes:480,revision:1};
- const segments=data.entries.map((row:any)=>toSegment({source:row.source,data:{...row,revision:1,tags:[],note:null,project:null}},data.categories));
+ const segments=data.entries.map((row:any)=>{
+  const safeTags=Array.isArray(row.system_tags)?row.system_tags.filter((t:unknown)=>typeof t==='string'&&PUBLIC_SYSTEM_TAGS.has(t)):[];
+  return toSegment({source:row.source,data:{...row,revision:1,tags:safeTags,note:null,project:null}},data.categories);
+ });
  if(route==='/v1/time/segments'){
   const selected=segments.filter((s:any)=>!params.source||s.source===params.source);
   const offset=z.coerce.number().int().min(0).max(10000).parse(params.offset||0),limit=z.coerce.number().int().min(1).max(10000).parse(params.limit||10000);

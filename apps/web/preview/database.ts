@@ -1,12 +1,13 @@
 /**
- * [INPUT]: 正式native投影所需的表形状与本机时钟。
- * [OUTPUT]: 仅在内存中读写的合成账本客户端。
+ * [INPUT]: 正式native投影所需的表形状、合成AI遥测数据集与本机时钟。
+ * [OUTPUT]: 仅在内存中读写的合成账本客户端（含 Orca AI 并发轨与自动校对时间段演示）。
  * [POS]: UI预览数据替身；不模拟数据库权限或生产事务保证。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import {randomUUID} from 'node:crypto';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {today} from '../src/model';
+import {buildDemoAiDataset, buildDemoDayTimeRows} from './ai-preview';
 type Row=Record<string,any>;
 export function demoDatabase(){
   const tables:Record<string,Row[]>={categories:[],time_entries:[],transactions:[],local_records:[],
@@ -17,13 +18,14 @@ export function demoDatabase(){
   groups.forEach(([name,nature],i)=>tables.categories.push({id:i+1,name,nature,kind:'time',is_active:true,keywords:[],code:`demo-${i}`,metadata:{}}));
   [['餐饮','expense'],['交通','expense'],['数码订阅','expense'],['项目收入','income']].forEach(([name,direction],i)=>
     tables.categories.push({id:100+i,name,kind:'money',direction,is_active:true,metadata:{tintHex:['#dc8e62','#7e99bc','#9683bc','#6f9f85'][i],monthlyBudget:1500}}));
-  const day=today(),stamp=(d:string,h:number)=>new Date(`${d}T${String(h).padStart(2,'0')}:00:00+08:00`).toISOString();
+  const day=today(),nowMs=Date.now(),stamp=(d:string,h:number)=>new Date(`${d}T${String(h).padStart(2,'0')}:00:00+08:00`).toISOString();
+  const stampMin=(d:string,min:number)=>new Date(`${d}T${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}:00+08:00`).toISOString();
+  const aiDemo=buildDemoAiDataset(day,nowMs);
   for(let offset=20;offset>=0;offset--){
     const d=new Date(Date.parse(`${day}T12:00:00Z`)-offset*864e5).toISOString().slice(0,10);
-    for(const [start,end,category_id,activity] of [[0,7,5,'夜间睡眠'],[7,8,4,'早餐与准备'],[8,10,1,'撰写方案'],[10,11,2,'阅读与学习'],[11,12,3,'日常事务'],[12,13,4,'午餐'],[13,15,1,'项目开发'],[15,16,6,'散步与训练'],[16,18,1,'整理项目'],[18,19,4,'晚餐'],[19,21,8,'手机与放松']] as const){
-      if(offset===0&&Date.parse(stamp(d,start))>Date.now())continue;
-      tables.time_entries.push({id:randomUUID(),revision:1,start_at:stamp(d,start),end_at:stamp(d,end),category_id,activity,
-        project:category_id===1?'LifeOS演示项目':null,note:'合成演示记录',tags:[],deduction_minutes:0,created_at:stamp(d,start),updated_at:stamp(d,end),deleted_at:null,raw_inputs:{source:'web'}});
+    for(const item of buildDemoDayTimeRows(d,offset,nowMs)){
+      tables.time_entries.push({id:randomUUID(),revision:1,start_at:stampMin(d,item.startMin),end_at:stampMin(d,item.endMin),category_id:item.categoryId,activity:item.activity,
+        project:item.project,note:item.note,tags:item.tags,deduction_minutes:0,created_at:stampMin(d,item.startMin),updated_at:stampMin(d,item.endMin),deleted_at:null,raw_inputs:{source:item.source}});
     }
     for(const [title,amount_cents,category_id,direction] of [['演示午餐',3800,100,'expense'],['演示出行',1800,101,'expense'],...(offset%7===0?[['演示项目收入',320000,103,'income']]:[])] as Array<[string,number,number,string]>){
       tables.transactions.push({id:randomUUID(),revision:1,title,amount_cents,category_id,direction,occurred_at:stamp(d,12),currency:'CNY',account:'演示钱包',merchant:'演示商户',note:'合成演示记录',tags:[],details:{},deleted_at:null});
@@ -33,7 +35,7 @@ export function demoDatabase(){
     data:{name:'演示钱包',type:'电子钱包',currency:'CNY',openingBalance:20000,ownership:'personal',classification:'asset'}});
   tables.raw_inputs.push({id:randomUUID(),text:'这是UI演示数据，可以放心修改界面。',received_at:new Date().toISOString(),input_kind:'text',status:'applied',revoked_at:null});
   function source(name:string):Row[]{
-    if(name==='v_records')return [...tables.time_entries.map(data=>({id:data.id,kind:'time',event_at:data.start_at,title:data.activity,source:'web',deleted_at:data.deleted_at,search_text:data.activity,data})),
+    if(name==='v_records')return [...tables.time_entries.map(data=>({id:data.id,kind:'time',event_at:data.start_at,title:data.activity,source:data.raw_inputs?.source||'web',deleted_at:data.deleted_at,search_text:data.activity,data})),
       ...tables.transactions.map(data=>({id:data.id,kind:'money',event_at:data.occurred_at,title:data.title,source:'web',deleted_at:data.deleted_at,search_text:data.title,data})),
       ...tables.local_records.map(data=>({id:data.id,kind:data.kind,event_at:null,title:data.data.name,source:'demo',deleted_at:data.deleted_at,data:data.data}))];
     return tables[name]||[];
@@ -67,6 +69,9 @@ export function demoDatabase(){
   async function rpc(name:string,args:Row){
     let data:any=null;
     if(name==='edit_record')return rpc('dashboard_record',{...args,p_action:'update',p_data:args.p_patch});
+    if(name==='get_orca_ai_range'){
+      return {data:structuredClone(aiDemo.sliceRange(String(args.p_from||''),String(args.p_to||''))),error:null};
+    }
     if(name==='dashboard_record'){
       if(!['time','money'].includes(args.p_kind))return {error:{message:'该记录类型未纳入UI演示'},data:null};
       const table=args.p_kind==='time'?tables.time_entries:tables.transactions;

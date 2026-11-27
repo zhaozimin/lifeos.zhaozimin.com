@@ -11,6 +11,7 @@ Worker检查身份，数据库RLS再次检查本人AAL2。
 健康公开副本通过白名单重建，私人自述不公开。
 灵感记录原文禁止改写，独立生成标题、总结与严格两层标签；显式开启 share_inspirations 后提供零 JS HTML/Markdown/JSON 抓取源供外部页面与 Agent 按日总结。
 WHOOP夜间及午睡校准时间轴；首尾与邻近短空白手机归娱乐，未结如厕超10分自动转休息；醒后WHOOP晨报附带昨日时间轴异常核对并进入最近对话。
+Orca AI独立轨道记录多Agent算力与本机/手机触点，与本人柳比歇夫时间账完全解耦；分别统计深度工作与AI工作总时长，不自动切分或改写休息时段。
 MemOS按配置召回与同步微信记忆，不上传全量账本。
 VPS在订阅扣款前七天入队微信提醒，独立于浏览器通知。
 微信支持进行中并发改历史（纠错、区间替换与WHOOP睡眠60秒边界吸附），保留原话、版本和审计。
@@ -18,7 +19,7 @@ VPS在订阅扣款前七天入队微信提醒，独立于浏览器通知。
 本机预览使用合成数据，与正式账本隔离。
 
 <directory>
-apps/ - 应用工程（4子目录：relay、web、whoop、subscriptions）。
+apps/ - 应用工程（5子目录：relay、web、whoop、subscriptions、orca-sync）。
 supabase/ - 数据库迁移与权限测试（2子目录：migrations、test）。
 ops/ - 预览、VPS部署、微信授权与加密备份工具。
 design/ - 设计系统锁版本（1子目录：zzm）。

@@ -68,7 +68,7 @@ export function toSegment(record: Row, categories: Row[]): Segment {
     tags: t.tags || [],
     note: t.note,
     source:
-      record.source === "whoop"
+      record.source === "whoop" || record.source === "orca"
         ? "device"
         : record.source === "local-lifeos"
         ? "import"
@@ -126,12 +126,16 @@ export function timeSummary(
   const cats = new Map<string, RangeSummary["byCategory"][number]>(),
     projects = new Map<string, RangeSummary["byProject"][number]>();
   let effectiveWorkMinutes = 0,
+    deepWorkMinutes = 0,
+    lightCollabMinutes = 0,
     grossWorkMinutes = 0,
     recordedMinutes = 0,
     gapMinutes = 0,
     deductionMinutes = 0;
   const days = daysInRange(from, to).map((date) => {
     let work = 0,
+      deepWork = 0,
+      lightCollab = 0,
       gross = 0;
     for (const s of segments) {
       const cut = sliceSegmentForDay(s, date, minute, clock);
@@ -163,7 +167,12 @@ export function timeSummary(
         p.segmentCount++;
         projects.set(s.projectName, p);
       }
-      if (groupOnly ? s.category.name === "工作" : s.category.nature === "core") work += cut.pure;
+      const isWork = groupOnly ? s.category.name === "工作" : s.category.nature === "core";
+      if (isWork) {
+        work += cut.pure;
+        if (s.tags.includes("ai-collab")) lightCollab += cut.pure;
+        else deepWork += cut.pure;
+      }
       if (groupOnly ? s.category.name === "工作" : s.category.nature === "core" || s.category.nature === "support")
         grossWorkMinutes += cut.gross;
       deductionMinutes += cut.gross - cut.pure;
@@ -181,11 +190,15 @@ export function timeSummary(
       ),
       recorded = Math.max(0, elapsed - gaps);
     effectiveWorkMinutes += work;
+    deepWorkMinutes += deepWork;
+    lightCollabMinutes += lightCollab;
     recordedMinutes += recorded;
     gapMinutes += gaps;
     return {
       date,
       effectiveWorkMinutes: work,
+      deepWorkMinutes: deepWork,
+      lightCollabMinutes: lightCollab,
       grossMinutes: gross,
       recordedMinutes: recorded,
       gapMinutes: gaps,
@@ -205,6 +218,8 @@ export function timeSummary(
       (a, b) => b.pureMinutes - a.pureMinutes,
     ),
     effectiveWorkMinutes,
+    deepWorkMinutes,
+    lightCollabMinutes,
     grossWorkMinutes,
     recordedMinutes,
     gapMinutes,

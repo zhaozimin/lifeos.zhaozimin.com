@@ -1,7 +1,7 @@
 /**
- * [INPUT]: 依赖筛选后/完整 Segment 账本、Gap、记录时区墙钟与 UTC 当前瞬间、服务端下发的超长阈值、DST 裁剪、超长判定、整屏缩放与细节栏纯函数、设计系统时间画布及页面一次性 PUT 回调。
- * [OUTPUT]: 对外提供 24h 墙钟时间轴、UTC 真实时长、折叠片段保守投影、DST 日只读拖拽降级、超长软标记、短时段细节与普通日调时。
- * [POS]: components/timeline 的单日领域编排器；UTC/墙钟与超长语义由 lib 裁定，本层只把安全状态、几何、标签、色块和手柄映射到设计系统。
+ * [INPUT]: 依赖筛选后/完整 Segment 账本、Gap、单日 AI 并发切片与协作簇、记录时区墙钟与 UTC 当前瞬间、服务端下发的超长阈值、DST 裁剪、超长判定、整屏缩放与可变高度细节栏纯函数、设计系统时间画布、AiModelMeta 及页面一次性 PUT 回调。
+ * [OUTPUT]: 对外提供 24h 墙钟时间轴、具体事项栏内动态分栏（无 AI 时人类全宽，有 AI 并行时左「我自己」右「AI 并行块」）、短 AI 块与右侧细节栏联动高亮、关细节栏时的鼠标旁降级浮层、UTC 真实时长、DST 日只读降级、超长软标记与普通日调时。
+ * [POS]: components/timeline 的单日领域编排器；UTC/墙钟与超长语义由 lib 裁定，本层把安全状态、几何、动态分栏、AI 并行块、细节导引线、色块和手柄映射到设计系统。
  * readOnly透传手势层，访客不显示可拖动控制柄。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -13,8 +13,14 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CSSProperties, WheelEvent } from "react";
+import type { CSSProperties, PointerEvent, WheelEvent } from "react";
 import type { Gap, Nature, Segment } from "../../types";
+import type {
+  AiActivityCluster,
+  AiConcurrencyBand,
+  AiDaySlice,
+  AiDayTouchpoint,
+} from "../../lib/aiTrack";
 import { minuteOfDay } from "../../lib/dates";
 import {
   isSegmentOverlong,
@@ -28,7 +34,10 @@ import {
   TIMELINE_ZOOM_LEVELS,
 } from "../../lib/timelineInteraction";
 import type { TimelineZoomSelection } from "../../lib/timelineInteraction";
-import { needsCallout, placeCallouts } from "../../lib/timelineCallouts";
+import {
+  needsCallout,
+  placeVariableCallouts,
+} from "../../lib/timelineCallouts";
 import { NATURE_LABEL, formatMinutes } from "../../lib/nature";
 import { Button } from "../ui/Button";
 import {
@@ -46,6 +55,13 @@ import type {
   TimelineGestureState,
   TimelineResizeHandleConfig,
 } from "../ui/TimelineCanvas";
+import {
+  AiDetailCard,
+  AiInlineBlock,
+  AiTrackPopover,
+  estimateAiClusterCardHeight,
+  needsAiCallout,
+} from "./AiModelMeta";
 import { TimelineEvent } from "./TimelineEvent";
 import { useTimelineSegmentInteraction } from "./useTimelineSegmentInteraction";
 import type {
@@ -80,6 +96,9 @@ export function DayTimeline({
   segments,
   allSegments,
   gaps,
+  aiDay = null,
+  aiLaneEnabled = false,
+  onAiLaneEnabledChange,
   nowMinute,
   nowUtc,
   recordTimeZone,
@@ -98,6 +117,9 @@ export function DayTimeline({
   segments: Segment[];
   allSegments: Segment[];
   gaps: Gap[];
+  aiDay?: AiDaySlice | null;
+  aiLaneEnabled?: boolean;
+  onAiLaneEnabledChange?: (enabled: boolean) => void;
   nowMinute: string;
   nowUtc: string;
   recordTimeZone: string;
@@ -117,6 +139,10 @@ export function DayTimeline({
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const [hoveredBandId, setHoveredBandId] = useState<string | null>(null);
+  const [hoveredClusterId, setHoveredClusterId] = useState<string | null>(null);
+  const [pinnedClusterId, setPinnedClusterId] = useState<string | null>(null);
+  const [pointerPos, setPointerPos] = useState<{ x: number; y: number } | null>(null);
   const zoom = resolveTimelineZoom(zoomId, viewportHeight);
   const previousPixelsPerMinute = useRef(zoom.pixelsPerMinute);
   const pendingCenterMinute = useRef<number | null>(null);
@@ -229,8 +255,60 @@ export function DayTimeline({
     if (next && next.value !== zoomId) selectZoom(next.value);
   };
 
+  const showAiSplit = Boolean(aiLaneEnabled && aiDay && aiDay.clusters.length > 0);
+
+  useEffect(() => {
+    setHoveredBandId(null);
+    setHoveredClusterId(null);
+    setPinnedClusterId(null);
+    setPointerPos(null);
+  }, [day]);
+
+  const bandsByCluster = useMemo(() => {
+    const map = new Map<string, AiConcurrencyBand[]>();
+    if (!aiDay) return map;
+    for (const band of aiDay.bands) {
+      const list = map.get(band.clusterId);
+      if (list) list.push(band);
+      else map.set(band.clusterId, [band]);
+    }
+    return map;
+  }, [aiDay]);
+
+  const touchpointsByCluster = useMemo(() => {
+    const map = new Map<string, AiDayTouchpoint[]>();
+    if (!aiDay) return map;
+    for (const tp of aiDay.touchpoints) {
+      if (!tp.clusterId) continue;
+      const list = map.get(tp.clusterId);
+      if (list) list.push(tp);
+      else map.set(tp.clusterId, [tp]);
+    }
+    return map;
+  }, [aiDay]);
+
+  const activeBand: AiConcurrencyBand | null = useMemo(
+    () => (hoveredBandId && aiDay ? aiDay.bands.find((b) => b.id === hoveredBandId) ?? null : null),
+    [hoveredBandId, aiDay],
+  );
+
+  const activeClusterId = activeBand?.clusterId ?? hoveredClusterId ?? pinnedClusterId;
+  const activeCluster: AiActivityCluster | null = useMemo(
+    () => (activeClusterId && aiDay ? aiDay.clusters.find((c) => c.id === activeClusterId) ?? null : null),
+    [activeClusterId, aiDay],
+  );
+
+  const activeAnchorY = useMemo(() => {
+    if (!showAiSplit || !activeCluster) return null;
+    if (activeBand && activeBand.clusterId === activeCluster.id) {
+      return ((activeBand.startMinute + activeBand.endMinute) / 2) * zoom.pixelsPerMinute;
+    }
+    return ((activeCluster.startMinute + activeCluster.endMinute) / 2) * zoom.pixelsPerMinute;
+  }, [showAiSplit, activeCluster, activeBand, zoom.pixelsPerMinute]);
+
+  // 合并人类短时段 / 空白段与当前缩放下无法完整内联展示的 AI 并发簇，排入右侧「细节」栏
   const calloutItems = useMemo(() => {
-    const items = [
+    const humanItems = [
       ...gaps.map((gap) => {
         const startMinute = minuteOfDay(gap.start);
         const endMinute = gap.end.endsWith("T00:00") ? 1440 : minuteOfDay(gap.end);
@@ -240,6 +318,7 @@ export function DayTimeline({
           gap,
           startMinute,
           endMinute,
+          height: TIMELINE_CALLOUT_LABEL_HEIGHT_PX,
         };
       }),
       ...entries.map((entry) => ({
@@ -248,22 +327,40 @@ export function DayTimeline({
         ...entry,
         startMinute: entry.slice.startMinute,
         endMinute: entry.slice.endMinute,
+        height: TIMELINE_CALLOUT_LABEL_HEIGHT_PX,
       })),
-    ];
-    return items
-      .filter((item) => needsCallout(item.endMinute - item.startMinute, zoom.pixelsPerMinute))
-      .sort((left, right) => left.startMinute - right.startMinute);
-  }, [entries, gaps, zoom.pixelsPerMinute]);
+    ].filter((item) => needsCallout(item.endMinute - item.startMinute, zoom.pixelsPerMinute));
 
-  const calloutPlacements = useMemo(() => placeCallouts(
+    const aiItems = showAiSplit && aiDay
+      ? aiDay.clusters
+        .filter((cluster) => {
+          const blockHeight = Math.max(4, (cluster.endMinute - cluster.startMinute) * zoom.pixelsPerMinute);
+          return needsAiCallout(cluster, blockHeight);
+        })
+        .map((cluster) => ({
+          id: `ai:${cluster.id}`,
+          kind: "ai" as const,
+          cluster,
+          startMinute: cluster.startMinute,
+          endMinute: cluster.endMinute,
+          height: estimateAiClusterCardHeight(cluster),
+        }))
+      : [];
+
+    return [...humanItems, ...aiItems].sort(
+      (left, right) => (left.startMinute + left.endMinute) / 2 - (right.startMinute + right.endMinute) / 2,
+    );
+  }, [aiDay, entries, gaps, showAiSplit, zoom.pixelsPerMinute]);
+
+  const calloutPlacements = useMemo(() => placeVariableCallouts(
     calloutItems,
     {
       pixelsPerMinute: zoom.pixelsPerMinute,
       canvasHeight: 1440 * zoom.pixelsPerMinute,
-      labelHeight: TIMELINE_CALLOUT_LABEL_HEIGHT_PX,
       labelGap: TIMELINE_CALLOUT_LABEL_GAP_PX,
     },
   ), [calloutItems, zoom.pixelsPerMinute]);
+
   const placementById = useMemo(
     () => new Map(calloutPlacements.map((placement) => [placement.id, placement])),
     [calloutPlacements],
@@ -272,6 +369,25 @@ export function DayTimeline({
   const callouts = calloutItems.map((item) => {
     const placement = placementById.get(item.id);
     if (!placement) return null;
+    if (item.kind === "ai") {
+      const highlighted = activeClusterId === item.cluster.id;
+      const pinned = pinnedClusterId === item.cluster.id;
+      return (
+        <AiDetailCard
+          key={item.id}
+          cluster={item.cluster}
+          activeBand={highlighted ? activeBand : null}
+          highlighted={highlighted}
+          pinned={pinned}
+          style={{ top: placement.labelY }}
+          onPointerEnter={() => setHoveredClusterId(item.cluster.id)}
+          onPointerLeave={() => setHoveredClusterId((cur) => (cur === item.cluster.id ? null : cur))}
+          onFocus={() => setHoveredClusterId(item.cluster.id)}
+          onBlur={() => setHoveredClusterId((cur) => (cur === item.cluster.id ? null : cur))}
+          onClick={() => setPinnedClusterId((cur) => (cur === item.cluster.id ? null : item.cluster.id))}
+        />
+      );
+    }
     if (item.kind === "gap") {
       return (
         <TimelineCallout
@@ -319,15 +435,71 @@ export function DayTimeline({
     );
   });
 
-  const calloutLines = calloutItems.map((item) => {
+  // 高亮连线后绘，确保在 SVG 层级中始终压在普通连线之上
+  const orderedLineItems = useMemo(() => {
+    const normal: typeof calloutItems = [];
+    const lit: typeof calloutItems = [];
+    for (const item of calloutItems) {
+      const isLit = (item.kind === "segment" && interaction.selectedId === item.original.id)
+        || (item.kind === "ai" && activeClusterId === item.cluster.id);
+      if (isLit) lit.push(item);
+      else normal.push(item);
+    }
+    return [...normal, ...lit];
+  }, [activeClusterId, calloutItems, interaction.selectedId]);
+
+  const calloutLines = orderedLineItems.map((item) => {
     const placement = placementById.get(item.id);
     if (!placement) return null;
+    const endX = TIMELINE_CALLOUT_GUTTER_PX;
+
+    if (item.kind === "ai") {
+      const highlighted = activeClusterId === item.cluster.id;
+      const anchorY = highlighted && activeAnchorY !== null ? activeAnchorY : placement.anchorY;
+      const labelCenter = placement.labelY + Math.min(26, placement.height / 2);
+      const color = item.cluster.level === 4 ? "var(--zzm-accent)" : "var(--data-4)";
+      return (
+        <g
+          key={item.id}
+          className="timeos-ai-callout-line"
+          data-highlighted={highlighted || undefined}
+          data-level={item.cluster.level}
+        >
+          <polyline
+            fill="none"
+            stroke={color}
+            strokeWidth={highlighted ? 2.2 : 1.1}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity={highlighted ? 1 : 0.36}
+            points={`0,${anchorY} 12,${anchorY} ${endX - 12},${labelCenter} ${endX},${labelCenter}`}
+          />
+          {highlighted && (
+            <circle cx="0" cy={anchorY} r="6.5" fill={color} opacity="0.22" />
+          )}
+          <circle
+            cx="0"
+            cy={anchorY}
+            r={highlighted ? 3.5 : 2.2}
+            fill={color}
+            opacity={highlighted ? 1 : 0.55}
+          />
+          <circle
+            cx={endX}
+            cy={labelCenter}
+            r={highlighted ? 2.6 : 1.6}
+            fill={color}
+            opacity={highlighted ? 1 : 0.45}
+          />
+        </g>
+      );
+    }
+
     const selected = item.kind === "segment" && interaction.selectedId === item.original.id;
     const color = item.kind === "segment"
       ? natureColors[item.segment.category.nature]
       : "var(--muted-foreground)";
-    const labelCenter = placement.labelY + TIMELINE_CALLOUT_LABEL_HEIGHT_PX / 2;
-    const endX = TIMELINE_CALLOUT_GUTTER_PX;
+    const labelCenter = placement.labelY + placement.height / 2;
     return (
       <g key={item.id} data-highlighted={selected || undefined}>
         <polyline
@@ -384,15 +556,45 @@ export function DayTimeline({
     </>
   );
 
+  const handleAiBlockBandHover = (
+    clusterId: string,
+    band: AiConcurrencyBand | null,
+    event: PointerEvent<HTMLButtonElement>,
+  ) => {
+    setHoveredClusterId(clusterId);
+    setHoveredBandId(band ? band.id : null);
+    if (!calloutsEnabled) {
+      setPointerPos({ x: event.clientX, y: event.clientY });
+    }
+  };
+
+  const detailOverlay = isToday
+    ? <TimelineNowLine top={nowTop} label={`当前时间 ${nowMinute.slice(11)}`} />
+    : undefined;
+
   return (
     <>
       <div className="timeos-timeline-toolbar">
         <span className="timeos-timeline-toolbar__hint">
-          {readOnly?'只读浏览 · 可调整时间缩放':transitionDay
-            ? "夏令时切换日 · 显示实际时长 · 拖拽已停用，请双击设置"
-            : "单击选中 · 长按拖动 · 双击设置"}
+          {readOnly
+            ? (showAiSplit ? "只读浏览 · 有 AI 并行时段自动拆为「我自己 | AI」" : "只读浏览 · 可调整时间缩放")
+            : transitionDay
+              ? "夏令时切换日 · 显示实际时长 · 拖拽已停用，请双击设置"
+              : showAiSplit
+                ? "单击选中 · 长按拖动 · 有 AI 并行时段自动拆为「我自己 | AI」"
+                : "单击选中 · 长按拖动 · 双击设置"}
         </span>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {onAiLaneEnabledChange && (
+            <Button
+              size="sm"
+              variant={aiLaneEnabled ? "outline" : "ghost"}
+              aria-pressed={aiLaneEnabled}
+              onClick={() => onAiLaneEnabledChange(!aiLaneEnabled)}
+            >
+              AI 并行 · {aiLaneEnabled ? "开" : "关"}
+            </Button>
+          )}
           <Button
             size="sm"
             variant={calloutsEnabled ? "outline" : "ghost"}
@@ -413,11 +615,12 @@ export function DayTimeline({
         distributionAriaLabel={`${day} 活动分钟分布`}
         detailsAriaLabel={`${day} 具体事项`}
         distribution={distribution}
+        aiSplitActive={showAiSplit}
         calloutsEnabled={calloutsEnabled}
         callouts={callouts}
         calloutLines={calloutLines}
         onViewportWheel={onWheel}
-        overlay={isToday ? <TimelineNowLine top={nowTop} label={`当前时间 ${nowMinute.slice(11)}`} /> : undefined}
+        overlay={detailOverlay}
       >
         {entries.map(({ original, segment, overlong, slice }) => {
           const state = interaction.visualState(original);
@@ -429,6 +632,11 @@ export function DayTimeline({
               end={endBinding ? resizeHandle(endBinding, segment.endedAt?.slice(11) || "进行中", state.committing) : false}
             />
           ) : undefined;
+          const overlapsAi = showAiSplit && aiDay
+            ? aiDay.clusters.some(
+                (cluster) => cluster.startMinute < slice.endMinute && cluster.endMinute > slice.startMinute,
+              )
+            : false;
           return (
             <TimelineEvent
               key={`${original.id}-${day}`}
@@ -438,6 +646,7 @@ export function DayTimeline({
               durationMinutes={slice.gross}
               color={natureColors[segment.category.nature]}
               variant="day"
+              splitLane={overlapsAi ? "me" : "full"}
               style={{
                 top: slice.startMinute * zoom.pixelsPerMinute,
                 height: Math.max(1, (slice.endMinute - slice.startMinute) * zoom.pixelsPerMinute),
@@ -452,8 +661,44 @@ export function DayTimeline({
             />
           );
         })}
+        {showAiSplit && aiDay && aiDay.clusters.map((cluster) => {
+          const top = cluster.startMinute * zoom.pixelsPerMinute;
+          const height = Math.max(4, (cluster.endMinute - cluster.startMinute) * zoom.pixelsPerMinute);
+          const highlighted = activeClusterId === cluster.id;
+          const pinned = pinnedClusterId === cluster.id;
+          return (
+            <AiInlineBlock
+              key={`ai-block-${cluster.id}`}
+              cluster={cluster}
+              bands={bandsByCluster.get(cluster.id) ?? []}
+              touchpoints={touchpointsByCluster.get(cluster.id) ?? []}
+              activeBand={highlighted ? activeBand : null}
+              highlighted={highlighted}
+              pinned={pinned}
+              style={{ top, height }}
+              onBandHover={(band, event) => handleAiBlockBandHover(cluster.id, band, event)}
+              onClusterLeave={() => {
+                setHoveredClusterId((cur) => (cur === cluster.id ? null : cur));
+                setHoveredBandId((cur) => (activeBand?.clusterId === cluster.id ? null : cur));
+                setPointerPos(null);
+              }}
+              onFocus={() => setHoveredClusterId(cluster.id)}
+              onBlur={() => setHoveredClusterId((cur) => (cur === cluster.id ? null : cur))}
+              onClick={() => setPinnedClusterId((cur) => (cur === cluster.id ? null : cluster.id))}
+            />
+          );
+        })}
       </TimelineDayFrame>
+      {!calloutsEnabled && activeBand && pointerPos && (
+        <AiTrackPopover
+          band={activeBand}
+          cluster={activeCluster}
+          x={pointerPos.x}
+          y={pointerPos.y}
+        />
+      )}
       <p className="sr-only" aria-live="polite">{interaction.announcement}</p>
     </>
   );
 }
+

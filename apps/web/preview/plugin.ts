@@ -70,6 +70,7 @@ export function uiPreview():Plugin{
         if(req.headers.origin&&!['http://127.0.0.1:5173','http://localhost:5173'].includes(req.headers.origin)){json(res,{message:'预览拒绝其他页面来源'},403);return;}
         try{
           if(/(?:^|\/)(?:\.private|\.wrangler|\.dev\.vars[^/]*)(?:\/|$)/.test(decodeURIComponent(url.pathname))){json(res,{message:'私有文件不属于UI预览'},403);return;}
+          if(url.pathname==='/'||url.pathname===''){res.writeHead(302,{Location:'/dashboard/time/day'});res.end();return;}
           if(url.pathname==='/inspirations/feed'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(inspirations.renderHtml(url));return;}
           if(url.pathname==='/inspirations.md'){res.writeHead(200,{'Content-Type':'text/markdown; charset=utf-8','Cache-Control':'no-store'});res.end(inspirations.renderMarkdown(url));return;}
           if(url.pathname==='/inspirations.json'){json(res,inspirations.publicFeed(url));return;}
